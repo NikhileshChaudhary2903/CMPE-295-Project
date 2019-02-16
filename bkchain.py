@@ -1,7 +1,7 @@
 from time import time
 import json
 import hashlib
-
+from flask import Flask,jsonify,request
 
 class Blockchain:
 
@@ -9,7 +9,7 @@ class Blockchain:
         self.chain = []
         self.txn_pool = []
 
-        create_block("genesis")
+        self.create_block("genesis")
 
     def create_block(self, prev_hash):
         new_block = {
@@ -17,25 +17,28 @@ class Blockchain:
             "header": {
                 "index": len(self.chain),
                 "root": self.merkle(self.txn_pool),
-                "prev_hash": prev_hash if prev_hash != null else self.hash(self.chain[-1]["header"]),
+                "prev_hash": prev_hash if prev_hash != None else self.hash(self.chain[-1]["header"]),
                 "nonce": 0
             },
             "txn": self.txn_pool
         }
 
-        pow(new_block)
+        self.pow(new_block)
 
         self.chain.append(new_block)
         self.txn_pool = []
 
     def merkle(self, txn):
+        # print(len(txn))
+        if len(txn) == 0:
+            return "empty"
         if len(txn) == 1:
             return txn[0]
 
         next_lvl = []
         if len(txn) % 2 == 1:
             txn.append(txn[-1])
-        for i in range(len(txn), step=2):
+        for i in range(0,len(txn),2):
             next_lvl.append(hash(txn[i:i + 2]))
 
         return self.merkle(next_lvl)
@@ -83,7 +86,7 @@ class Blockchain:
 
             prev_block = current_block
 
-        if len(new_chain) > len(self.chain)
+        if len(new_chain) > len(self.chain):
             self.chain = new_chain
             self.txn_pool = new_txn_pool
 
@@ -98,3 +101,50 @@ class Blockchain:
 
     def add_block_to_chain(self):
         pass
+
+    def add_transaction(self,txn):
+        self.txn_pool.append(txn)
+
+
+  # Instantiate the Node
+app = Flask(__name__)
+
+
+@app.route('/chain', methods=['GET'])  
+def full_blockchain():
+
+    resp={
+        'chain': blockchain.chain,
+        'host': '0.0.0.0',
+        'port': 4000
+    }
+
+    return jsonify(resp),201
+
+@app.route('/hello', methods=['GET']) 
+def hello():
+    return 'Hello World'    
+
+@app.route('/block/<int:blockno>', methods=['GET']) 
+def get_block(blockno=None):
+    if blockno == None:
+        return "Block Not found" , 404
+
+    if len(blockchain.chain) <=  blockno:  
+        return "Block Not found" , 404
+
+    else:
+        return jsonify(blockchain.chain[blockno]),201
+
+
+
+        
+
+
+# Instantiate the Blockchain
+blockchain = Blockchain()   
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=4000,debug=True)   
+    
