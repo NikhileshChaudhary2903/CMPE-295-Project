@@ -2,6 +2,7 @@ from time import time
 import json
 import hashlib
 from flask import Flask,jsonify,request
+import datetime
 
 class Blockchain:
 
@@ -106,6 +107,14 @@ class Blockchain:
         self.txn_pool.append(txn)
 
 
+    def receive_chain(self):
+
+
+
+
+
+
+
   # Instantiate the Node
 app = Flask(__name__)
 
@@ -136,9 +145,6 @@ def get_block(blockno=None):
     else:
         return jsonify(blockchain.chain[blockno]),201
 
-
-
-        
 
 
 # Instantiate the Blockchain
