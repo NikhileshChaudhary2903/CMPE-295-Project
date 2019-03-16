@@ -148,7 +148,7 @@ def get_nodes():
         'nodeslist': list(blockchain.nodes),
         'noofnodes': len(blockchain.nodes)
     }
-    return jsonify(resp), 201
+    return jsonify(resp), 200
 
 
 @app.route('/chain', methods=['GET'])
@@ -159,7 +159,7 @@ def full_blockchain():
         'port': 4000
     }
 
-    return jsonify(resp), 201
+    return jsonify(resp), 200
 
 
 @app.route('/hello', methods=['GET'])
@@ -176,7 +176,7 @@ def get_block(blockno=None):
         return "Block Not found", 404
 
     else:
-        return jsonify(blockchain.chain[blockno]), 201
+        return jsonify(blockchain.chain[blockno]), 200
 
 
 @app.route('/gossip', methods=['GET'])
@@ -208,7 +208,7 @@ def generate_wallet():
                                          format=serialization.PrivateFormat.TraditionalOpenSSL,
                                          encryption_algorithm=serialization.NoEncryption()).decode('utf-8')
 
-    return jsonify(d), 201
+    return jsonify(d), 200
 
 
 # Instantiate the Blockchain
