@@ -36,6 +36,7 @@ class Blockchain:
 
         self.chain.append(new_block)
         self.txn_pool = []
+        return new_block 
 
     def new_transaction(self, sender_address, recipient_address, amount):
         transaction = {'sender_address': sender_address,
@@ -224,6 +225,29 @@ def add_new_transaction():
     index = blockchain.new_transaction(values['sender_address'], values['recipient_address'], values['amount'])
     response = {'message': f'Transaction will be added to Block {index}'}
     return jsonify(response), 201
+
+@app.route('/mine', methods=['GET'])
+def mine():
+
+    # We must receive a reward for finding the proof.
+    #     # The sender is "dummy" to signify that this node has mined a new coin.
+    blockchain.new_transaction(
+        sender_address="Dummy",
+        recipient_address=blockchain.node_identifier,
+        amount=10,
+    )
+
+    # Forge the new Block by adding it to the chain
+    block = blockchain.create_block(prev_hash=None)
+
+    response = {
+        'message': "New Block Forged",
+        'index': block['header']['index'],
+        'transactions': block['header']['transactions'],
+        'proof': block['header']['nonce'],
+        'previous_hash': block['header']['prev_hash'],
+    }
+    return jsonify(response), 200
 
 
 @app.route('/gossip', methods=['GET'])
