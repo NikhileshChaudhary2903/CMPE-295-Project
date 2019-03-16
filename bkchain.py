@@ -25,7 +25,7 @@ class Blockchain:
             "time": time(),
             "header": {
                 "index": len(self.chain),
-                "root": self.merkle(self.txn_pool),
+                # "root": self.merkle(self.txn_pool),
                 "prev_hash": prev_hash if prev_hash != None else self.hash(self.chain[-1]["header"]),
                 "nonce": 0
             },
@@ -75,7 +75,7 @@ class Blockchain:
         while self.hash(block["header"])[:4] != "0000":
             block["header"]["nonce"] = block["header"]["nonce"] + 1
             block["header"]["index"] = len(self.chain)
-            block["header"]["root"] = self.merkle(self.txn_pool)
+            # block["header"]["root"] = self.merkle(self.txn_pool)
 
     def validate_block(self, new_block, sender_ip):
         if new_block["header"]["index"] > len(self.chain):
@@ -243,7 +243,7 @@ def mine():
     response = {
         'message': "New Block Forged",
         'index': block['header']['index'],
-        'transactions': block['header']['transactions'],
+        'transactions': block['txn'],
         'proof': block['header']['nonce'],
         'previous_hash': block['header']['prev_hash'],
     }
