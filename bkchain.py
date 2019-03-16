@@ -1,12 +1,13 @@
 from time import time
 import json
 import hashlib
-from flask import Flask,jsonify,request
+from flask import Flask, jsonify, request
 import datetime
 from urllib.parse import urlparse
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
+
 
 class Blockchain:
 
@@ -33,7 +34,7 @@ class Blockchain:
         self.chain.append(new_block)
         self.txn_pool = []
 
-    def register_nodes(self,url):
+    def register_nodes(self, url):
 
         parsed_url = urlparse(url)
         if parsed_url.netloc:
@@ -41,7 +42,7 @@ class Blockchain:
         elif parsed_url.path:
             self.nodes.add(parsed_url.path)
         else:
-            raise ValueError('Invalid URL')        
+            raise ValueError('Invalid URL')
 
     def merkle(self, txn):
         # print(len(txn))
@@ -53,7 +54,7 @@ class Blockchain:
         next_lvl = []
         if len(txn) % 2 == 1:
             txn.append(txn[-1])
-        for i in range(0,len(txn),2):
+        for i in range(0, len(txn), 2):
             next_lvl.append(hash(txn[i:i + 2]))
 
         return self.merkle(next_lvl)
@@ -117,13 +118,13 @@ class Blockchain:
     def add_block_to_chain(self):
         pass
 
-    def new_transaction(self,sender_address,recipient_address,amount):
-        transaction = {'sender_address': sender_address, 
-                        'recipient_address': recipient_address,
-                        'amount': amount}
-                            
+    def new_transaction(self, sender_address, recipient_address, amount):
+        transaction = {'sender_address': sender_address,
+                       'recipient_address': recipient_address,
+                       'amount': amount}
+
         self.txn_pool.append(transaction)
-        return self.get_last_block()['header']['index'] + 1    
+        return self.get_last_block()['header']['index'] + 1
 
     # def add_transaction(self,txn):
     #     self.txn_pool.append(txn)
@@ -133,61 +134,83 @@ class Blockchain:
 
     def get_last_block(self):
         return self.chain[-1]
-    
+
 
 # Initialize the Flask app
 app = Flask(__name__)
 
-@app.route('/nodes/all',methods=['GET'])
+
+@app.route('/nodes/all', methods=['GET'])
 def get_nodes():
     resp = {
-               'nodeslist' : list(blockchain.nodes),
-               'noofnodes' : len(blockchain.nodes) 
+        'nodeslist': list(blockchain.nodes),
+        'noofnodes': len(blockchain.nodes)
     }
-    return jsonify(resp),201
+    return jsonify(resp), 201
 
 
-@app.route('/chain', methods=['GET'])  
+@app.route('/chain', methods=['GET'])
 def full_blockchain():
-
-    resp={
+    resp = {
         'chain': blockchain.chain,
         'host': '0.0.0.0',
         'port': 4000
     }
 
-    return jsonify(resp),201
+    return jsonify(resp), 201
 
-@app.route('/hello', methods=['GET']) 
+
+@app.route('/hello', methods=['GET'])
 def hello():
-    return 'Hello World'    
+    return 'Hello World'
 
-@app.route('/block/<int:blockno>', methods=['GET']) 
+
+@app.route('/block/<int:blockno>', methods=['GET'])
 def get_block(blockno=None):
     if blockno == None:
-        return "Block Not found" , 404
+        return "Block Not found", 404
 
-    if len(blockchain.chain) <=  blockno:  
-        return "Block Not found" , 404
+    if len(blockchain.chain) <= blockno:
+        return "Block Not found", 404
 
     else:
-        return jsonify(blockchain.chain[blockno]),201
+        return jsonify(blockchain.chain[blockno]), 201
+
+
+@app.route('/gossip', methods=['GET'])
+def gossip():
+    global blockchain
+    data = request.json
+    if data["origin"] not in blockchain.nodes:
+        blockchain.register_nodes(data["origin"])
+    if data["type"] == "transaction":
+        blockchain.new_transaction(data["data"]["senders_address"], data["data"]["recipient_address"],
+                                   data["data"]["amount"])
+        return "Sucessfully added transaction", 200
+    elif data["type"] == "block":
+        blockchain.add_block_to_chain(data["data"]["block"])
+        return "Sucessfully added block", 200
+
+    return "Invalid Request", 400
+
 
 @app.route('/generate_wallet', methods=['GET'])
 def generate_wallet():
-   
     # generate private/public key pair
     key = rsa.generate_private_key(backend=default_backend(), public_exponent=65537, key_size=2048)
 
     d = {}
-    d["public_key"] = key.public_key().public_bytes(serialization.Encoding.OpenSSH, serialization.PublicFormat.OpenSSH).decode('utf-8')
-    d["private_key"] = key.private_bytes(encoding=serialization.Encoding.PEM, format=serialization.PrivateFormat.TraditionalOpenSSL, encryption_algorithm=serialization.NoEncryption()).decode('utf-8')
-    
+    d["public_key"] = key.public_key().public_bytes(serialization.Encoding.OpenSSH,
+                                                    serialization.PublicFormat.OpenSSH).decode('utf-8')
+    d["private_key"] = key.private_bytes(encoding=serialization.Encoding.PEM,
+                                         format=serialization.PrivateFormat.TraditionalOpenSSL,
+                                         encryption_algorithm=serialization.NoEncryption()).decode('utf-8')
+
     return jsonify(d), 201
 
+
 # Instantiate the Blockchain
-blockchain = Blockchain()   
+blockchain = Blockchain()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=4000,debug=True)   
-    
+    app.run(host='0.0.0.0', port=4000, debug=True)
