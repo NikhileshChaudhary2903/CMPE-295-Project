@@ -141,7 +141,23 @@ class Blockchain:
 # Initialize the Flask app
 app = Flask(__name__)
 
+## Generating pub-pvt key pair for Wallets Creation 
+## Wont be storing balance in wallet
+@app.route('/generate_wallet', methods=['GET'])
+def generate_wallet():
+    # generate private/public key pair
+    key = rsa.generate_private_key(backend=default_backend(), public_exponent=65537, key_size=2048)
 
+    d = {}
+    d["public_key"] = key.public_key().public_bytes(serialization.Encoding.OpenSSH,
+                                                    serialization.PublicFormat.OpenSSH).decode('utf-8')
+    d["private_key"] = key.private_bytes(encoding=serialization.Encoding.PEM,
+                                         format=serialization.PrivateFormat.TraditionalOpenSSL,
+                                         encryption_algorithm=serialization.NoEncryption()).decode('utf-8')
+
+    return jsonify(d), 200
+
+## registering and investigating Nodes
 @app.route('/nodes/all', methods=['GET'])
 def get_nodes():
     resp = {
@@ -150,6 +166,22 @@ def get_nodes():
     }
     return jsonify(resp), 200
 
+@app.route('/nodes/register', methods=['POST'])
+def register_nodes():
+    values = request.form
+    nodes = values.get('nodes').replace(" ", "").split(',')
+
+    if nodes is None:
+        return "Invalid list specified Try Again !!", 400
+
+    for node in nodes:
+        blockchain.register_node(node)
+
+    response = {
+        'message': 'New nodes were added',
+        'total_nodes': [node for node in blockchain.nodes],
+    }
+    return jsonify(response), 201
 
 @app.route('/chain', methods=['GET'])
 def full_blockchain():
@@ -196,19 +228,7 @@ def gossip():
     return "Invalid Request", 400
 
 
-@app.route('/generate_wallet', methods=['GET'])
-def generate_wallet():
-    # generate private/public key pair
-    key = rsa.generate_private_key(backend=default_backend(), public_exponent=65537, key_size=2048)
 
-    d = {}
-    d["public_key"] = key.public_key().public_bytes(serialization.Encoding.OpenSSH,
-                                                    serialization.PublicFormat.OpenSSH).decode('utf-8')
-    d["private_key"] = key.private_bytes(encoding=serialization.Encoding.PEM,
-                                         format=serialization.PrivateFormat.TraditionalOpenSSL,
-                                         encryption_algorithm=serialization.NoEncryption()).decode('utf-8')
-
-    return jsonify(d), 200
 
 
 # Instantiate the Blockchain
