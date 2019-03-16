@@ -34,7 +34,15 @@ class Blockchain:
         self.chain.append(new_block)
         self.txn_pool = []
 
-    def register_nodes(self, url):
+    def new_transaction(self, sender_address, recipient_address, amount):
+        transaction = {'sender_address': sender_address,
+                       'recipient_address': recipient_address,
+                       'amount': amount}
+
+        self.txn_pool.append(transaction)
+        return self.get_last_block()['header']['index'] + 1
+
+    def register_node(self, url):
 
         parsed_url = urlparse(url)
         if parsed_url.netloc:
@@ -118,13 +126,7 @@ class Blockchain:
     def add_block_to_chain(self):
         pass
 
-    def new_transaction(self, sender_address, recipient_address, amount):
-        transaction = {'sender_address': sender_address,
-                       'recipient_address': recipient_address,
-                       'amount': amount}
-
-        self.txn_pool.append(transaction)
-        return self.get_last_block()['header']['index'] + 1
+    
 
     # def add_transaction(self,txn):
     #     self.txn_pool.append(txn)
@@ -182,7 +184,7 @@ def gossip():
     global blockchain
     data = request.json
     if data["origin"] not in blockchain.nodes:
-        blockchain.register_nodes(data["origin"])
+        blockchain.register_node(data["origin"])
     if data["type"] == "transaction":
         blockchain.new_transaction(data["data"]["senders_address"], data["data"]["recipient_address"],
                                    data["data"]["amount"])
