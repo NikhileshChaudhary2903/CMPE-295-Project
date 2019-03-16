@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
+from uuid import uuid4
 
 
 class Blockchain:
@@ -16,6 +17,8 @@ class Blockchain:
         self.txn_pool = []
         self.nodes = set()
         self.create_block("genesis")
+        self.node_identifier = str(uuid4()).replace('-', '')
+
 
     def create_block(self, prev_hash):
         new_block = {
@@ -123,16 +126,11 @@ class Blockchain:
     def ask_chain(self, ip):
         pass
 
-    def add_block_to_chain(self):
+    def add_block_to_chain(self,block):
         pass
-
-    
-
-    # def add_transaction(self,txn):
-    #     self.txn_pool.append(txn)
 
     def receive_chain(self):
-        pass
+       pass
 
     def get_last_block(self):
         return self.chain[-1]
@@ -172,9 +170,9 @@ def register_nodes():
     values = request.get_json()
 
     nodes = values.get('nodes')
-    print(nodes)   
+    # print(nodes)   
     if nodes is None:
-        return "Error: Please supply a valid list of nodes", 400
+        return "Error: Please enter a valid list of nodes", 400
 
     for node in nodes:
         blockchain.register_node(node)
@@ -213,6 +211,20 @@ def get_block(blockno=None):
     else:
         return jsonify(blockchain.chain[blockno]), 200
 
+@app.route('/transactions/new', methods=['POST'])
+def add_new_transaction():
+    values = request.get_json()
+
+    # Check that the required fields are in the POST'ed data
+    required = ['sender_address', 'recipient_address', 'amount']
+    if not all(k in values for k in required):
+        return 'Missing values', 400
+
+    # Create a new Transaction
+    index = blockchain.new_transaction(values['sender_address'], values['recipient_address'], values['amount'])
+    response = {'message': f'Transaction will be added to Block {index}'}
+    return jsonify(response), 201
+
 
 @app.route('/gossip', methods=['GET'])
 def gossip():
@@ -229,8 +241,6 @@ def gossip():
         return "Sucessfully added block", 200
 
     return "Invalid Request", 400
-
-
 
 
 
