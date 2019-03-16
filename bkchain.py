@@ -3,13 +3,17 @@ import json
 import hashlib
 from flask import Flask,jsonify,request
 import datetime
+from urllib.parse import urlparse
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.backends import default_backend
 
 class Blockchain:
 
     def __init__(self):
         self.chain = []
         self.txn_pool = []
-
+        self.nodes = set()
         self.create_block("genesis")
 
     def create_block(self, prev_hash):
@@ -28,6 +32,16 @@ class Blockchain:
 
         self.chain.append(new_block)
         self.txn_pool = []
+
+    def register_nodes(self,url):
+
+        parsed_url = urlparse(url)
+        if parsed_url.netloc:
+            self.nodes.add(parsed_url.netloc)
+        elif parsed_url.path:
+            self.nodes.add(parsed_url.path)
+        else:
+            raise ValueError('Invalid URL')        
 
     def merkle(self, txn):
         # print(len(txn))
@@ -103,14 +117,35 @@ class Blockchain:
     def add_block_to_chain(self):
         pass
 
-    def add_transaction(self,txn):
-        self.txn_pool.append(txn)
+    def new_transaction(self,sender_address,recipient_address,amount):
+        transaction = {'sender_address': sender_address, 
+                        'recipient_address': recipient_address,
+                        'amount': amount}
+                            
+        self.txn_pool.append(transaction)
+        return self.get_last_block()['header']['index'] + 1    
+
+    # def add_transaction(self,txn):
+    #     self.txn_pool.append(txn)
 
     def receive_chain(self):
         pass
 
+    def get_last_block(self):
+        return self.chain[-1]
+    
+
 # Initialize the Flask app
 app = Flask(__name__)
+
+@app.route('/nodes/all',methods=['GET'])
+def get_nodes():
+    resp = {
+               'nodeslist' : list(blockchain.nodes),
+               'noofnodes' : len(blockchain.nodes) 
+    }
+    return jsonify(resp),201
+
 
 @app.route('/chain', methods=['GET'])  
 def full_blockchain():
@@ -140,9 +175,7 @@ def get_block(blockno=None):
 
 @app.route('/generate_wallet', methods=['GET'])
 def generate_wallet():
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import rsa
-    from cryptography.hazmat.backends import default_backend
+   
     # generate private/public key pair
     key = rsa.generate_private_key(backend=default_backend(), public_exponent=65537, key_size=2048)
 
