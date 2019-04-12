@@ -272,12 +272,13 @@ def add_new_transaction():
     values = request.get_json()
 
     # Check that the required fields are in the POST'ed data
-    required = ['sender_address', 'recipient_address', 'amount','signature']
+    required = ['sender_address', 'recipient_address', 'amount']
     if not all(k in values for k in required):
         return 'Missing values', 400
 
+
     # Create a new Transaction
-    index = blockchain.submit_transaction(values['sender_address'], values['recipient_address'], values['amount'],values['signature'])
+    index = blockchain.submit_transaction(values['sender_address'], values['recipient_address'], values['amount'],)
     response = {'message': f'Transaction will be added to Block {index}'}
     return jsonify(response), 201
 
@@ -312,7 +313,7 @@ def gossip():
     if data["origin"] not in blockchain.nodes:
         blockchain.register_node(data["origin"])
     if data["type"] == "transaction":
-        blockchain.new_transaction(data["data"]["senders_address"], data["data"]["recipient_address"],
+        blockchain.submit_transaction(data["data"]["sender_address"], data["data"]["recipient_address"],
                                    data["data"]["amount"])
         return "Sucessfully added transaction", 200
     elif data["type"] == "block":
@@ -334,6 +335,24 @@ def reg_new_wallet():
 	}
 
 	return jsonify(response), 200
+
+@app.route('/generate/transaction', methods=['POST'])
+def generate_transaction():
+	
+	sender_address = request.get_json().get('sender_address')
+	sender_private_key = request.get_json().get('sender_private_key')
+	recipient_address = request.get_json().get('recipient_address')
+	amount = request.get_json().get('amount')
+
+	response = {
+                        'sender_address': sender_address, 
+                        'recipient_address': recipient_address,
+                        'amount': amount,
+                        'signature': blockchain.sign_transaction(sender_address,sender_private_key,recipient_address,amount)
+    }
+
+	return jsonify(response), 200
+
 
 # Instantiate the Blockchain
 blockchain = Blockchain()
