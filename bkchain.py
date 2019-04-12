@@ -79,20 +79,20 @@ class Blockchain:
         transaction = {'sender_address': sender_address, 
                         'recipient_address': recipient_address,
                         'amount': amount}
-        self.txn_pool.append(transaction)
-        return self.get_last_block()['header']['index'] + 1
-        # #Reward for mining a block
-        # if sender_address == "dummy":
-        #     self.txn_pool.append(transaction)
-        #     return self.get_last_block()['header']['index'] + 1
-        # #Manages txns from wallet to another wallet
-        # else:
-        #     transaction_verification = self.verify_transaction_signature(sender_address, signature, transaction)
-        #     if transaction_verification:
-        #         self.txn_pool.append(transaction)
-        #         return self.get_last_block()['header']['index'] + 1
-        #     else:
-        #         return False    
+        # self.txn_pool.append(transaction)
+        # return self.get_last_block()['header']['index'] + 1
+        #Reward for mining a block
+        if sender_address == "dummy":
+            self.txn_pool.append(transaction)
+            return self.get_last_block()['header']['index'] + 1
+        #Manages txns from wallet to another wallet
+        else:
+            transaction_verification = self.verify_transaction_signature(sender_address, signature, transaction)
+            if transaction_verification:
+                self.txn_pool.append(transaction)
+                return self.get_last_block()['header']['index'] + 1
+            else:
+                return False    
 
 
     def register_node(self, url):
@@ -282,7 +282,7 @@ def mine():
     # We must receive a reward for finding the proof.
     #     # The sender is "dummy" to signify that this node has mined a new coin.
     blockchain.submit_transaction(
-        sender_address="Dummy",
+        sender_address="dummy",
         recipient_address=blockchain.node_identifier,
         amount=10,signature=""
     )
