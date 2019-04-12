@@ -8,6 +8,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
 from uuid import uuid4
+from collections import OrderedDict
 
 import Crypto
 import Crypto.Random
@@ -78,28 +79,21 @@ class Blockchain:
         transaction = {'sender_address': sender_address, 
                         'recipient_address': recipient_address,
                         'amount': amount}
+        self.txn_pool.append(transaction)
+        return self.get_last_block()['header']['index'] + 1
+        # #Reward for mining a block
+        # if sender_address == "dummy":
+        #     self.txn_pool.append(transaction)
+        #     return self.get_last_block()['header']['index'] + 1
+        # #Manages txns from wallet to another wallet
+        # else:
+        #     transaction_verification = self.verify_transaction_signature(sender_address, signature, transaction)
+        #     if transaction_verification:
+        #         self.txn_pool.append(transaction)
+        #         return self.get_last_block()['header']['index'] + 1
+        #     else:
+        #         return False    
 
-        #Reward for mining a block
-        if sender_address == "dummy":
-            self.txn_pool.append(transaction)
-            return self.get_last_block()['header']['index'] + 1
-        #Manages txns from wallet to another wallet
-        else:
-            transaction_verification = self.verify_transaction_signature(sender_address, signature, transaction)
-            if transaction_verification:
-                self.txn_pool.append(transaction)
-                return self.get_last_block()['header']['index'] + 1
-            else:
-                return False    
-
-
-    # def new_transaction(self, sender_address, recipient_address, amount):
-    #     transaction = {'sender_address': sender_address,
-    #                    'recipient_address': recipient_address,
-    #                    'amount': amount}
-
-    #     self.txn_pool.append(transaction)
-    #     return self.get_last_block()['header']['index'] + 1
 
     def register_node(self, url):
 
@@ -272,13 +266,13 @@ def add_new_transaction():
     values = request.get_json()
 
     # Check that the required fields are in the POST'ed data
-    required = ['sender_address', 'recipient_address', 'amount']
+    required = ['sender_address', 'recipient_address', 'amount','signature']
     if not all(k in values for k in required):
         return 'Missing values', 400
 
 
     # Create a new Transaction
-    index = blockchain.submit_transaction(values['sender_address'], values['recipient_address'], values['amount'],)
+    index = blockchain.submit_transaction(values['sender_address'], values['recipient_address'], values['amount'],values['signature'])
     response = {'message': f'Transaction will be added to Block {index}'}
     return jsonify(response), 201
 
