@@ -2,4 +2,4 @@ flask
 requests
 uuid
 cryptography
-hashlib
+Crypto

@@ -8,7 +8,14 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
 from uuid import uuid4
+from collections import OrderedDict
 
+import Crypto
+import Crypto.Random
+from Crypto.Hash import SHA
+from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_v1_5
+import binascii
 
 class Blockchain:
 
@@ -38,13 +45,55 @@ class Blockchain:
         self.txn_pool = []
         return new_block 
 
-    def new_transaction(self, sender_address, recipient_address, amount):
-        transaction = {'sender_address': sender_address,
+    ## Sign txn with private key of sender
+    def sign_transaction(self,sender_address,sender_private_key,recipient_address,amount):
+        """
+        Sign transaction with private key
+        """
+        private_key = RSA.importKey(binascii.unhexlify(sender_private_key))
+        signer = PKCS1_v1_5.new(private_key)
+
+        transaction = {'sender_address': sender_address, 
                        'recipient_address': recipient_address,
                        'amount': amount}
 
-        self.txn_pool.append(transaction)
-        return self.get_last_block()['header']['index'] + 1
+        h = SHA.new(str(transaction).encode('utf8'))
+        return binascii.hexlify(signer.sign(h)).decode('ascii')
+
+    ## Verify txn with public key of sender and signature verification
+    def verify_transaction_signature(self, sender_address, signature, transaction):
+        """
+        Check that the provided signature corresponds to transaction
+        signed by the public key (sender_address)
+        """
+        public_key = RSA.importKey(binascii.unhexlify(sender_address))
+        verifier = PKCS1_v1_5.new(public_key)
+        h = SHA.new(str(transaction).encode('utf8'))
+        return verifier.verify(h, binascii.unhexlify(signature))
+
+
+    def submit_transaction(self, sender_address, recipient_address, amount, signature):
+        """
+        Add a transaction to transactions array if the signature is verified
+        """
+        transaction = {'sender_address': sender_address, 
+                        'recipient_address': recipient_address,
+                        'amount': amount}
+        # self.txn_pool.append(transaction)
+        # return self.get_last_block()['header']['index'] + 1
+        #Reward for mining a block
+        if sender_address == "dummy":
+            self.txn_pool.append(transaction)
+            return self.get_last_block()['header']['index'] + 1
+        #Manages txns from wallet to another wallet
+        else:
+            transaction_verification = self.verify_transaction_signature(sender_address, signature, transaction)
+            if transaction_verification:
+                self.txn_pool.append(transaction)
+                return self.get_last_block()['header']['index'] + 1
+            else:
+                return False    
+
 
     def register_node(self, url):
 
@@ -217,12 +266,13 @@ def add_new_transaction():
     values = request.get_json()
 
     # Check that the required fields are in the POST'ed data
-    required = ['sender_address', 'recipient_address', 'amount']
+    required = ['sender_address', 'recipient_address', 'amount','signature']
     if not all(k in values for k in required):
         return 'Missing values', 400
 
+
     # Create a new Transaction
-    index = blockchain.new_transaction(values['sender_address'], values['recipient_address'], values['amount'])
+    index = blockchain.submit_transaction(values['sender_address'], values['recipient_address'], values['amount'],values['signature'])
     response = {'message': f'Transaction will be added to Block {index}'}
     return jsonify(response), 201
 
@@ -231,10 +281,10 @@ def mine():
 
     # We must receive a reward for finding the proof.
     #     # The sender is "dummy" to signify that this node has mined a new coin.
-    blockchain.new_transaction(
-        sender_address="Dummy",
+    blockchain.submit_transaction(
+        sender_address="dummy",
         recipient_address=blockchain.node_identifier,
-        amount=10,
+        amount=10,signature=""
     )
 
     # Forge the new Block by adding it to the chain
@@ -257,7 +307,7 @@ def gossip():
     if data["origin"] not in blockchain.nodes:
         blockchain.register_node(data["origin"])
     if data["type"] == "transaction":
-        blockchain.new_transaction(data["data"]["senders_address"], data["data"]["recipient_address"],
+        blockchain.submit_transaction(data["data"]["sender_address"], data["data"]["recipient_address"],
                                    data["data"]["amount"])
         return "Sucessfully added transaction", 200
     elif data["type"] == "block":
@@ -266,10 +316,46 @@ def gossip():
 
     return "Invalid Request", 400
 
+## Generating pub-pvt key pair for Wallets Creation 
+## Wont be storing balance in wallet
+@app.route('/wallet/create', methods=['GET'])
+def reg_new_wallet():
+	random_gen = Crypto.Random.new().read
+	private_key = RSA.generate(1024, random_gen)
+	public_key = private_key.publickey()
+	response = {
+		'private_key': binascii.hexlify(private_key.exportKey(format='DER')).decode('ascii'),
+		'public_key': binascii.hexlify(public_key.exportKey(format='DER')).decode('ascii')
+	}
+
+	return jsonify(response), 200
+
+@app.route('/generate/transaction', methods=['POST'])
+def generate_transaction():
+	
+	sender_address = request.get_json().get('sender_address')
+	sender_private_key = request.get_json().get('sender_private_key')
+	recipient_address = request.get_json().get('recipient_address')
+	amount = request.get_json().get('amount')
+
+	response = {
+                        'sender_address': sender_address, 
+                        'recipient_address': recipient_address,
+                        'amount': amount,
+                        'signature': blockchain.sign_transaction(sender_address,sender_private_key,recipient_address,amount)
+    }
+
+	return jsonify(response), 200
 
 
 # Instantiate the Blockchain
 blockchain = Blockchain()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=4000, debug=True)
+    from argparse import ArgumentParser
+
+    parser = ArgumentParser()
+    parser.add_argument('-p', '--port', default=8080, type=int, help='port to listen on')
+    args = parser.parse_args()
+    port = args.port
+    app.run(host='0.0.0.0', port=port, debug=True)
