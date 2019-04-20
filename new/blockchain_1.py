@@ -23,10 +23,8 @@ def get_last_block():
     }
 
 
-def get_txn():
-    return {
-        "merkel" : "jhbhjbhjbhj",
-        "data" : [
+def get_txns():          # return just the list of un-mined transactions
+    return  [
             
             {
                 "type" : 1,
@@ -35,7 +33,6 @@ def get_txn():
                 "receiver": "publickey5",
             }
         ]
-    }
 
     def merkel_root(my_transactions):
         block_string = json.dumps(my_transactions, sort_keys=True).encode()
