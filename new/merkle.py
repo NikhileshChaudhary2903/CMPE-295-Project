@@ -1,5 +1,12 @@
 from hashlib import sha256
 import codecs
+import json
+
+def merkle_root(txns):
+    transactions = []
+    for txn in txns:
+        transactions.append(sha256(json.dumps(txn, sort_keys=True).encode('utf8')).hexdigest())
+    return str(merkle(transactions))[2:-1]
 
 def merkle(hashList):
     if len(hashList) == 1:
@@ -28,16 +35,3 @@ def hash2(a, b):
     # print ("hash2:" + str(codecs.encode(h[::-1], 'hex')))
     # print (" ")
     return codecs.encode(h[::-1], 'hex')
-
-txHashes = [
-"338bbd00b893c384eb2b11e70f3875447297c5f20815499e787867df4538e48d",
-"1ad1138c6064dd17d0a4d12016d629c18f15fc9d1472412945f9c91a696689c7",
-"c77834d14d66729014b06fcf45c5f82af4bdd9d816e787f01bfa525cfa147014",
-"bb3d83398d7517fe643b2421d795e73c342b6a478ef53acdaab35dbdffbbcdb5",
-"38d563caf0e9ed103515cab09e40e49da0ccb8c0765ce304f9556e5bc62e8ff5",
-"8fc0507359d0122fa14b5887034d857bd69c8bc0e74c8dd428c2fc098595c285",
-"9db9fe6d011c1c7e997418aeec78ccb659648cfc915b2ff1154cabb41359ac70",
-"3c72fdb7e38e4437faa9e5789df6b51505de014b062361ef47578244d5025628"
-]  	
-
-print(str(merkle(txHashes))[1:])

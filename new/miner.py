@@ -4,6 +4,7 @@ from datetime import datetime
 from hashlib import sha256
 import json
 import binascii
+from merkle import merkle_root
 
 def mine(stake, public_key):
     blockchain = Blockchain()
@@ -27,7 +28,8 @@ def get_header(txns, last_block_header, stake, public_key):
             "prev_hash" : sha256(json.dumps(last_block_header, sort_keys=True).encode('utf8')).hexdigest(),
             "stake" : stake,
             "miner" : public_key,
-            "merkle" : sha256(json.dumps(txns, sort_keys=True).encode('utf8')).hexdigest()            
+        #     "merkle" : sha256(json.dumps(txns, sort_keys=True).encode('utf8')).hexdigest()  
+            "merkle": merkle_root(txns)        
         }
 
 mine(10, "1EUhfrdDiSnL7bcATvtExQ1PruWMhfwwvV")
