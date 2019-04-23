@@ -1,10 +1,8 @@
-import json
-import hashlib
 from flask import Flask, jsonify, request
 from urllib.parse import urlparse
 from uuid import uuid4
 
-import new.merkle as mer
+import merkle as mer
 
 
 class Blockchain:
@@ -43,7 +41,8 @@ class Blockchain:
     def get_providers(self):
         return self.providers
 
-    def add_transaction(self,transaction):
+    def add_transaction(self, transaction):
+        return len(self.chain)
 
     def register_node(self, url):
         parsed_url = urlparse(url)
