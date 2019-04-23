@@ -4,7 +4,7 @@ from flask import Flask, jsonify, request
 from urllib.parse import urlparse
 from uuid import uuid4
 
-import new.merkle as mer
+import merkle as mer
 
 
 class Blockchain:
@@ -44,7 +44,7 @@ class Blockchain:
         return self.providers
 
     def add_transaction(self,transaction):
-
+        pass
     def register_node(self, url):
         parsed_url = urlparse(url)
         if parsed_url.netloc:

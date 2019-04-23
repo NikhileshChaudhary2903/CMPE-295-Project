@@ -1,0 +1,4 @@
+get_providers -> return { "providers" : [(ip, public_key)]}
+add_provider -> send { "ip" : "0.0.0.0", "public_key" : "publickey" }
+add_transaction -> send "signed transaction" -> return txn_id
+get_transaction_details -> send txn_id -> return transaction as json
