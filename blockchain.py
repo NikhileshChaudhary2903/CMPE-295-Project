@@ -41,14 +41,9 @@ class Blockchain:
     def get_providers(self):
         return self.providers
 
-<<<<<<< HEAD
     def add_transaction(self, transaction):
         return len(self.chain)
 
-=======
-    def add_transaction(self,transaction):
-        pass
->>>>>>> b149e3ab7eded737bc54a2f234f968b92bb195d5
     def register_node(self, url):
         parsed_url = urlparse(url)
         if parsed_url.netloc:
