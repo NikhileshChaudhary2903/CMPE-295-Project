@@ -2,7 +2,8 @@ from flask import Flask, jsonify, request
 from urllib.parse import urlparse
 from uuid import uuid4
 
-import merkle as mer
+import merkle
+import signatures
 
 
 class Blockchain:
@@ -16,12 +17,13 @@ class Blockchain:
                 "prev_hash": "genesis",
                 "stake": 0,
                 "miner": "Nikhilesh Chaudhary, Phani Teja Kantamneni, Arpit Mathur, Arshiya Pathan, Simon Shim",
-                "merkle": mer.merkle_root([])
+                "merkle": merkle.merkle_root({})
             },
             "rank": 0,
-            "txn": []
+            "txn": {}
         }]
-        self.txn_pool = []
+        self.txn_pool = {}
+        self.validated_txn_pool = {}
         self.prestige_pool = {}
         self.nodes = set()
         self.node_identifier = str(uuid4()).replace('-', '')
@@ -42,7 +44,12 @@ class Blockchain:
         return self.providers
 
     def add_transaction(self, transaction):
-        return len(self.chain)
+        if signatures.verify_signature(transaction['sender_address'], transaction):
+            txn_id = merkle.get_transaction_id(transaction)
+            self.txn_pool[txn_id] = transaction
+            return len(self.chain), txn_id
+        else:
+            return -1, 0
 
     def register_node(self, url):
         parsed_url = urlparse(url)
@@ -103,6 +110,27 @@ def hello():
     return 'Hello World'
 
 
+@app.route('/providers', methods=['GET'])
+def get_providers():
+    global blockchain
+    providers = {
+        "providers": blockchain.providers
+    }
+    return jsonify(providers), 200
+
+
+@app.route('/provider/add', methods=['POST'])
+def get_providers():
+    values = request.get_json()
+    required = ['ip', 'public_key']
+    if not all(k in values for k in required):
+        return 'Missing values', 400
+    global blockchain
+    blockchain.providers.append((values['ip'], values['public_key']))
+    response = {'message': 'Provider added'}
+    return jsonify(response), 201
+
+
 @app.route('/block/<int:blockno>', methods=['GET'])
 def get_block(blockno=None):
     if blockno is None:
@@ -115,7 +143,7 @@ def get_block(blockno=None):
         return jsonify(blockchain.chain[blockno]), 200
 
 
-@app.route('/transactions/new', methods=['POST'])
+@app.route('/transaction/add', methods=['POST'])
 def add_new_transaction():
     values = request.get_json()
 
@@ -124,10 +152,35 @@ def add_new_transaction():
     if not all(k in values for k in required):
         return 'Missing values', 400
 
-    # Create a new Transaction
-    index = blockchain.add_transaction(values['transaction'])
-    response = {'message': f'Transaction will be added to Block {index}'}
-    return jsonify(response), 201
+    required = ['sender_address']
+    if not all(k in values['transaction'] for k in required):
+        return 'Missing values', 400
+    global blockchain
+    index, txn_id = blockchain.add_transaction(values['transaction'])
+    if index != -1:
+        response = {'message': f'Transaction will be added to Block {index}',
+                    'txn_id': txn_id}
+        return jsonify(response), 201
+    else:
+        response = {'message': 'Transaction signature not valid'}
+        return jsonify(response), 400
+
+
+@app.route('/transaction/details', methods=['GET'])
+def get_transaction_details():
+    values = request.get_json()
+
+    # Check that the required fields are in the POST'ed data
+    required = ['txn_id']
+    if not all(k in values for k in required):
+        return 'Missing values', 400
+    global blockchain
+    if values['txn_id'] in blockchain.validated_txn_pool:
+        response = {'transaction': values['txn_id']}
+        return jsonify(response), 201
+    else:
+        response = {'message': 'Transaction not found'}
+        return jsonify(response), 400
 
 
 @app.route('/gossip', methods=['GET'])
