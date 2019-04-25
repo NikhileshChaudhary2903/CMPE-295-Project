@@ -120,7 +120,7 @@ def get_providers():
 
 
 @app.route('/provider/add', methods=['POST'])
-def get_providers():
+def add_providers():
     values = request.get_json()
     required = ['ip', 'public_key']
     if not all(k in values for k in required):
