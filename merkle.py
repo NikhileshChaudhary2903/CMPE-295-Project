@@ -36,3 +36,7 @@ def hash2(a, b):
     # print ("hash2:" + str(codecs.encode(h[::-1], 'hex')))
     # print (" ")
     return codecs.encode(h[::-1], 'hex')
+
+
+def get_transaction_id(txn):
+    return sha256(json.dumps(txn, sort_keys=True).encode('utf8')).hexdigest()
