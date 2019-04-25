@@ -57,7 +57,7 @@ def call_upload(file_details, provider):
         for seq in iter(lambda: f.read(1024 * 1024 * 10)):
             seq_list.append(transfer_pb2.FileData(fileName=file_details['name'], fileHash=file_details['hash'], txnId=file_details['txn_id'], data=seq))
         provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel(provider[0]))
-        file_info = provider_stub.UploadFile(gen_stream(seq_list))
+        file_info = provider_stub.UploadFile(gen_stream(seq_list), timeout=2)
 
 def gen_stream(list_of_chunks):
     for chunk in list_of_chunks:

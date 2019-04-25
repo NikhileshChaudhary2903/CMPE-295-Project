@@ -19,14 +19,15 @@ class FileTransfer(transfer_pb2_grpc.fileTransferServicer):
         txn_id = fd.txnId
         resp = requests.post(full_node_ip+'/trasaction/details', data={'txn_id' : txn_id})
         # TODO verify whether the trasaction is valid
-        with open(file_hash + '_' + file_name, "wb") as f:
-            f.write(fd.data)
-            for seq in fileDataStream:
-                f.write(seq.data)
-        file_read_details = {file_hash + '_' + file_name : {'reads_left' : [(500, (str(datetime.now().time()), 0))]}}
-        with open(file_hash + '_' + file_name + '.txt', "w") as f:
-            f.write(str(file_read_details))
-        return transfer_pb2.FileInfo(fileName=file_name)
+        if resp.status_code == 200:
+            with open(file_hash + '_' + file_name, "wb") as f:
+                f.write(fd.data)
+                for seq in fileDataStream:
+                    f.write(seq.data)
+            file_read_details = {file_hash + '_' + file_name : {'reads_left' : [(500, (str(datetime.now().time()), 0))]}}
+            with open(file_hash + '_' + file_name + '.txt', "w") as f:
+                f.write(str(file_read_details))
+            return transfer_pb2.FileInfo(fileName=file_name)
     
     def DownloadFile(self, fileInfo, context):
         file_name = fileInfo.fileName
