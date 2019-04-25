@@ -8,9 +8,10 @@ import requests
 from datetime import datetime
 from ast import literal_eval
 import signatures
-
-full_node_ip = "0.0.0.0:5000"
-my_ip = '0.0.0.0:5001'
+import wallets
+from flask import jsonify
+full_node_ip = 'http://0.0.0.0:5000'
+my_ip = 'http://127.0.0.1:5001'
 
 class FileTransfer(transfer_pb2_grpc.fileTransferServicer):
     def UploadFile(self, fileDataStream, context):
@@ -52,20 +53,21 @@ class FileTransfer(transfer_pb2_grpc.fileTransferServicer):
                 for chunk in iter(lambda: f.read(1024*1024 * 10), b""):
                     yield transfer_pb2.FileData(fileName=file_name, fileHash=file_hash, txnId=txn_id, data=chunk)  
 
-def serve(ip):
+def serve():
     try:
-        public_key, private_key = sys.argv[1], argv[2]
+        public_key, private_key = sys.argv[1], sys.argv[2]
     except IndexError:
-        print("Need 2 command line arguments, please try again...")
-        sys.exit(1)
-    resp = requests.post(full_node_ip+'/provider/add', data={'ip' : my_ip, 'public_key' : public_key})
+        tmp = wallets.get_wallet()
+        public_key, private_key = tmp['public_key_string'], tmp['private_key_string']
+    resp = requests.post(url = full_node_ip+'/provider/add', json={'ip' : my_ip, 'public_key' : public_key})
     if resp.status_code == 400:
         print("Couldn't register provider, please try again...")
         sys.exit(1)
+    # print(resp.json())
     file_transfer = FileTransfer()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     transfer_pb2_grpc.add_fileTransferServicer_to_server(file_transfer, server)
-    server.add_insecure_port(ip)
+    server.add_insecure_port(my_ip)
     server.start()
 
     try:
@@ -74,3 +76,4 @@ def serve(ip):
     except KeyboardInterrupt:
         sys.exit(1)
 
+serve()

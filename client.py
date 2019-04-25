@@ -13,10 +13,10 @@ import grpc
 from ast import literal_eval
 from datetime import datetime
 
-full_node_ip = '0.0.0.0:5000'
+full_node_ip = 'http://0.0.0.0:5000'
 
 def upload_file(file_name, public_key=None, private_key=None):
-    if public_key is None:
+    if public_key == "":
         d = wallets.get_wallet()
         public_key = d["public_key_string"]
         private_key = d["private_key_string"]
@@ -31,7 +31,7 @@ def upload_file(file_name, public_key=None, private_key=None):
             chunk_id += 1
 
     # file_txn_ids = []
-    providers_list = requests.get(full_node_ip+'/providers')
+    providers_list = requests.get(full_node_ip+'/providers').json()
     rand_provider_list = []
     for file_detail in file_details:
         provider = choice(providers_list['providers'])
@@ -70,9 +70,11 @@ def create_transaction(sender_address, sender_private_key, receiver_address, amo
             "receiver_address" : receiver_address, 
             "file" : file_details }
 
-    signed_txn = signatures.sign_data(sender_private_key, txn)
-    signed_txn_id = requests.post(full_node_ip+'/transaction/add', data={'trasaction':signed_txn})
-
+    # signed_txn = signatures.sign_data(sender_private_key, txn)
+    txn["signature"] = 'asdjfhlasdjhfjasdf'
+    signed_txn = txn
+    signed_txn_id = requests.post(full_node_ip+'/transaction/add', json={'transaction':signed_txn})
+    print(signed_txn_id)
     return signed_txn_id
 
 def download_file(file_name, private_key):

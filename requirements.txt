@@ -1,10 +1,10 @@
 flask
 requests
 uuid
-hashlib
 cryptography
 pycrypto
 ecdsa
 grpcio
 grpcio-tools
 protobuf
+pyOpenSSL

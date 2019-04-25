@@ -1,12 +1,11 @@
-from ecdsa import SigningKey, SECP256k1
-
-
 def get_wallet():
-    key = SigningKey.generate(curve=SECP256k1)
-    private_key_string = key.to_pem().decode()
-    public_key_string = key.get_verifying_key().to_pem().decode()
+    from OpenSSL import crypto
+    key = crypto.PKey()
+    key.generate_key(crypto.TYPE_RSA, 2048)
+    private_key = crypto.dump_privatekey(crypto.FILETYPE_PEM, key).decode('utf8')
+    public_key = crypto.dump_publickey(crypto.FILETYPE_PEM, key).decode('utf8')
 
     return {
-        "private_key_string": private_key_string,
-        "public_key_string": public_key_string
+        "public_key_string" : public_key,
+        "private_key_string" : private_key
     }
