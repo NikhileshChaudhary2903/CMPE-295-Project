@@ -6,8 +6,9 @@ import json
 def merkle_root(txns):
     return sha256(json.dumps(txns, sort_keys=True).encode('utf8')).hexdigest()
 
-
 def merkle(hash_list):
+    if len(hash_list) == 0:
+        return ""
     if len(hash_list) == 1:
         return hash_list[0]
     new_hash_list = []

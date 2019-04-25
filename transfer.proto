@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+service fileTransfer
+{
+    rpc UploadFile (stream FileData) returns (FileInfo);
+    rpc DownloadFile (FileInfo) returns (stream FileData);
+}
+
+message FileData
+{
+    string fileName = 1;
+    string fileHash = 2;
+    string txnId = 3;
+    bytes data = 4;
+}
+
+message FileInfo
+{
+    string fileName = 1;
+    string txnId = 2;
+    map<string, string> signedTime = 3;
+}
+
+message Empty 
+{
+
+}
