@@ -10,6 +10,7 @@ from ast import literal_eval
 import signatures
 
 full_node_ip = "0.0.0.0:5000"
+my_ip = '0.0.0.0:5001'
 
 class FileTransfer(transfer_pb2_grpc.fileTransferServicer):
     def UploadFile(self, fileDataStream, context):
@@ -52,6 +53,15 @@ class FileTransfer(transfer_pb2_grpc.fileTransferServicer):
                     yield transfer_pb2.FileData(fileName=file_name, fileHash=file_hash, txnId=txn_id, data=chunk)  
 
 def serve(ip):
+    try:
+        public_key, private_key = sys.argv[1], argv[2]
+    except IndexError:
+        print("Need 2 command line arguments, please try again...")
+        sys.exit(1)
+    resp = requests.post(full_node_ip+'/provider/add', data={'ip' : my_ip, 'public_key' : public_key})
+    if resp.status_code == 400:
+        print("Couldn't register provider, please try again...")
+        sys.exit(1)
     file_transfer = FileTransfer()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     transfer_pb2_grpc.add_fileTransferServicer_to_server(file_transfer, server)
