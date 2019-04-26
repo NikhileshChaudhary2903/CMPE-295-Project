@@ -6,6 +6,7 @@ import merkle
 import signatures
 from hashlib import sha256
 import json
+import rank_calc
 
 
 class Blockchain:
@@ -18,6 +19,7 @@ class Blockchain:
                 "nonce": "0",
                 "prev_hash": "genesis",
                 "stake": 0,
+                "prestige": 1,
                 "miner": "Nikhilesh Chaudhary, Phani Teja Kantamneni, Arpit Mathur, Arshiya Pathan, Simon Shim",
                 "merkle": merkle.merkle_root({})
             },
@@ -74,11 +76,15 @@ class Blockchain:
     # returns true if the new_chain is better
     # returns false if self.chain is better
     def find_winning_chain(self, new_chain):
-        if len(new_chain) < len(self.chain):
+        if len(new_chain) < len(self.chain) - 3:  # we wait for 3 confirmations to make a block permanent
             # self.chain wins on length
             return False
-        if len(new_chain) == len(self.chain):
-            pass
+        if len(new_chain) == len(self.chain) and len(self.chain) > 1:
+            if json.dumps(new_chain[-1], sort_keys=True).encode('utf8') == json.dumps(self.chain[-1],
+                                                                                      sort_keys=True).encode('utf8'):
+                return rank_calc.rank_calc(new_chain[-2]["header"], new_chain[-1]["header"]["stake"],
+                                           new_chain[-1]["header"]["prestige"]) < rank_calc.rank_calc(
+                    self.chain[-2]["header"], self.chain[-1]["header"]["stake"], self.chain[-1]["header"]["prestige"])
 
 
 # Initialize the Flask app
@@ -89,8 +95,8 @@ app = Flask(__name__)
 @app.route('/nodes/all', methods=['GET'])
 def get_nodes():
     resp = {
-        'nodeslist': list(blockchain.nodes),
-        'noofnodes': len(blockchain.nodes)
+        'nodes_list': list(blockchain.nodes),
+        'no_of_nodes': len(blockchain.nodes)
     }
     return jsonify(resp), 200
 
@@ -151,16 +157,16 @@ def add_providers():
     return jsonify(response), 201
 
 
-@app.route('/block/<int:blockno>', methods=['GET'])
-def get_block(blockno=None):
-    if blockno is None:
+@app.route('/block/<int:block_no>', methods=['GET'])
+def get_block(block_no=None):
+    if block_no is None:
         return "Block Not found", 404
 
-    if len(blockchain.chain) <= blockno:
+    if len(blockchain.chain) <= block_no:
         return "Block Not found", 404
 
     else:
-        return jsonify(blockchain.chain[blockno]), 200
+        return jsonify(blockchain.chain[block_no]), 200
 
 
 @app.route('/transaction/add', methods=['POST'])
