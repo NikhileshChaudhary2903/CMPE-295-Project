@@ -141,6 +141,9 @@ def gossip():
     for txn in data["transactions"]:
         blockchain.txn_pool[txn] = data["transactions"][txn]
 
+    if blockchain.find_winning_chain(data["blockchain"]):
+        blockchain.replace_chain(data["blockchain"])
+
     return "Gossip Received", 200
 
 
