@@ -4,6 +4,8 @@ from uuid import uuid4
 
 import merkle
 import signatures
+from hashlib import sha256
+import json
 
 
 class Blockchain:
@@ -59,6 +61,24 @@ class Blockchain:
             self.nodes.add(parsed_url.path)
         else:
             raise ValueError('Invalid URL')
+
+    def add_miners_block(self, new_block):
+        if new_block["header"]["prev_hash"] == sha256(
+                json.dumps(self.chain[-1]["header"], sort_keys=True).encode('utf8')).hexdigest():
+            for block_txn in new_block["txn"]:
+                self.validated_txn_pool[block_txn] = new_block["txn"][block_txn]
+                if block_txn in self.txn_pool:
+                    self.txn_pool.pop(block_txn)
+            self.chain.append(new_block)
+
+    # returns true if the new_chain is better
+    # returns false if self.chain is better
+    def find_winning_chain(self, new_chain):
+        if len(new_chain) < len(self.chain):
+            # self.chain wins on length
+            return False
+        if len(new_chain) == len(self.chain):
+            pass
 
 
 # Initialize the Flask app
