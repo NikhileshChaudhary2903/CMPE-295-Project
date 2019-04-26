@@ -155,6 +155,7 @@ def add_new_transaction():
     required = ['sender_address']
     if not all(k in values['transaction'] for k in required):
         return 'Missing values', 400
+
     global blockchain
     index, txn_id = blockchain.add_transaction(values['transaction'])
     if index != -1:

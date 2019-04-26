@@ -28,6 +28,8 @@ def upload_file(file_name, public_key=None, private_key=None):
     with open(file_name, "rb") as f:
         for seq in iter(lambda: f.read(file_chunk_size), b""):
             file_details.append({'name' : file_name + '_' + str(chunk_id), 'hash' : sha256(seq).hexdigest(), 'size' : file_chunk_size})
+            with open('tmp_uploads/' + file_details[-1]['name'], 'wb') as part:
+                part.write(seq)
             chunk_id += 1
 
     # file_txn_ids = []
@@ -37,27 +39,31 @@ def upload_file(file_name, public_key=None, private_key=None):
         provider = choice(providers_list['providers'])
         rand_provider_list.append(provider)
         provider_public_key = provider[1]
-        # file_txn_id = create_transaction(public_key, private_key, provider_public_key, 10, file_detail)
         # file_txn_ids.append(file_txn_id)
-        file_txn_id = create_transaction(public_key, private_key, provider_public_key, 10, file_detail)
+        file_txn_id = create_transaction(public_key, private_key, provider_public_key, 0, file_detail)
         file_detail['txn_id'] = file_txn_id
     
     with open(file_name + '.txt', "w") as f:
         f.write(str(file_details))
     # Wait till the trasactions are mined into a block
-    sleep(60)
-
+    # print(rand_provider_list)
+    sleep(2)
+ 
     for i in range(len(file_details)):
         call_upload(file_details[i], rand_provider_list[i])
-
+    
+    print('Done...')
  # Write gRPC calls here   
 def call_upload(file_details, provider):
     seq_list = []
-    with open(file_details['name'], "rb") as f:
-        for seq in iter(lambda: f.read(1024 * 1024 * 10)):
-            seq_list.append(transfer_pb2.FileData(fileName=file_details['name'], fileHash=file_details['hash'], txnId=file_details['txn_id'], data=seq))
-        provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel(provider[0]))
-        file_info = provider_stub.UploadFile(gen_stream(seq_list), timeout=2)
+    with open('tmp_uploads/' + file_details['name'], "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            seq_list.append(transfer_pb2.FileData(fileName=file_details['name'], fileHash=str(file_details['hash']), txnId=file_details['txn_id'], data=chunk))
+
+        provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel('localhost:5001'))
+        # print(provider_stub)
+        provider_stub.UploadFile(gen_stream(seq_list), timeout=2)
+    
 
 def gen_stream(list_of_chunks):
     for chunk in list_of_chunks:
@@ -70,12 +76,10 @@ def create_transaction(sender_address, sender_private_key, receiver_address, amo
             "receiver_address" : receiver_address, 
             "file" : file_details }
 
-    # signed_txn = signatures.sign_data(sender_private_key, txn)
-    txn["signature"] = 'asdjfhlasdjhfjasdf'
-    signed_txn = txn
-    signed_txn_id = requests.post(full_node_ip+'/transaction/add', json={'transaction':signed_txn})
+    signed_txn = signatures.sign_data(sender_private_key, txn)
+    signed_txn_id = requests.post(full_node_ip+'/transaction/add', json={'transaction':signed_txn}).json()
     print(signed_txn_id)
-    return signed_txn_id
+    return signed_txn_id['txn_id']
 
 def download_file(file_name, private_key):
     file_details = []

@@ -33,9 +33,3 @@ def verify_signature(public_key, data):
     verifier = PKCS1_v1_5.new(key)
     return verifier.verify(data_hash, sig)
 
-# keys = wallets.get_wallet()
-# d = {"data" : "hello"}
-# private_key = keys["private_key_string"]
-# public_key = keys["public_key_string"]
-
-# print(sign_data(private_key, d, public_key))

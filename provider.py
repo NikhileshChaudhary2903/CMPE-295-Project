@@ -11,25 +11,25 @@ import signatures
 import wallets
 from flask import jsonify
 full_node_ip = 'http://0.0.0.0:5000'
-my_ip = 'http://127.0.0.1:5001'
+my_ip = 'http://localhost:5001'
 
 class FileTransfer(transfer_pb2_grpc.fileTransferServicer):
     def UploadFile(self, fileDataStream, context):
         fd = fileDataStream.next()
         file_name = fd.fileName
-        file_hash = fd.file_hash
+        file_hash = fd.fileHash
         txn_id = fd.txnId
-        resp = requests.post(full_node_ip+'/trasaction/details', data={'txn_id' : txn_id})
+        # resp = requests.post(full_node_ip+'/trasaction/details', data={'txn_id' : txn_id}).json()
         # TODO verify whether the trasaction is valid
-        if resp.status_code == 200:
-            with open(file_hash + '_' + file_name, "wb") as f:
-                f.write(fd.data)
-                for seq in fileDataStream:
-                    f.write(seq.data)
-            file_read_details = {file_hash + '_' + file_name : {'reads_left' : [(500, (str(datetime.now().time()), 0))]}}
-            with open(file_hash + '_' + file_name + '.txt', "w") as f:
-                f.write(str(file_read_details))
-            return transfer_pb2.FileInfo(fileName=file_name)
+        # if resp.status_code == 201:
+        with open(file_hash + '_' + file_name, "wb") as f:
+            f.write(fd.data)
+            for seq in fileDataStream:
+                f.write(seq.data)
+        file_read_details = {file_hash + '_' + file_name : {'reads_left' : [(500, (str(datetime.now().time()), 0))]}}
+        with open(file_hash + '_' + file_name + '.txt', "w") as f:
+            f.write(str(file_read_details))
+        return transfer_pb2.FileInfo(fileName=file_name)
     
     def DownloadFile(self, fileInfo, context):
         file_name = fileInfo.fileName
@@ -67,9 +67,9 @@ def serve():
     file_transfer = FileTransfer()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     transfer_pb2_grpc.add_fileTransferServicer_to_server(file_transfer, server)
-    server.add_insecure_port(my_ip)
+    server.add_insecure_port('localhost:5001')
     server.start()
-
+    print("server started")
     try:
         while True:
             sleep(86400)
