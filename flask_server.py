@@ -1,12 +1,17 @@
 from flask import Flask, jsonify, request
-import blockchain as blockchain_module
-
-
+from miner import mine
+from argparse import ArgumentParser
+from threading import Thread
+import sys
+from ast import literal_eval
+from blockchain import Blockchain
 # Initialize the Flask app
 app = Flask(__name__)
 
-
+# Instantiate the Blockchain
+blockchain = Blockchain.get_instance()
 # registering and investigating Nodes
+
 @app.route('/nodes/all', methods=['GET'])
 def get_nodes():
     resp = {
@@ -146,15 +151,23 @@ def gossip():
 
     return "Gossip Received", 200
 
+def blockchain_run():
+    app.run(host='0.0.0.0', port=5000)
 
-# Instantiate the Blockchain
-blockchain = blockchain_module.Blockchain()
+def mine_run(stake, pem_file):
+    d = {}
+    with open(pem_file, 'r') as f:
+        d = literal_eval(f.read())
+    mine(stake, d["public_key_string"])
 
 if __name__ == '__main__':
-    from argparse import ArgumentParser
-
     parser = ArgumentParser()
-    parser.add_argument('-p', '--port', default=8080, type=int, help='port to listen on')
+    parser.add_argument('-m', '--mine', default=0, type=int, help='1 to mine, 0 to run just the blockchain')
+    parser.add_argument('-s', '--stake', default=1, type=int)
+    parser.add_argument('-p', '--pem', default=None)
     args = parser.parse_args()
-    port = args.port
-    app.run(host='0.0.0.0', port=port, debug=True)
+    Thread(target=blockchain_run).start()
+    if args.mine == 1:
+        stake, pem_file = args.stake, args.pem  
+        Thread(target=mine_run, args=(stake, pem_file, )).start()
+    
