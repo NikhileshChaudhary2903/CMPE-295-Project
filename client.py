@@ -53,6 +53,7 @@ def upload_file(file_name, public_key=None, private_key=None):
         call_upload(file_details[i], rand_provider_list[i])
     
     print('Done...')
+    print(private_key)
  # Write gRPC calls here   
 def call_upload(file_details, provider):
     seq_list = []
