@@ -1,14 +1,24 @@
-from flask import Flask, jsonify, request
 from urllib.parse import urlparse
-from uuid import uuid4
-
+from threading import Thread
 import merkle
 import signatures
 from hashlib import sha256
 import json
 import rank_calc
-import pprint
 import copy
+from time import sleep
+import requests
+
+
+def send_gossip(blockchain):
+    while True:
+        sleep(0.5)
+        for node in blockchain.nodes:
+            requests.post(node + '/gossip', json={
+                'origin': blockchain.node_id,
+                'blockchain': blockchain.chain,
+                'transactions': blockchain.txn_pool
+            })
 
 
 class Blockchain:
@@ -104,6 +114,8 @@ class Blockchain:
                     self.utxo[txn["sender"]] = 0
                 self.utxo[txn["sender"]] -= txn["amount"]
 
+        Thread(target=send_gossip, args=(Blockchain.__instance,)).start()
+
     def get_last_block(self):
         return copy.deepcopy(self.chain[-1])
 
@@ -131,13 +143,7 @@ class Blockchain:
         return -1, 0
 
     def register_node(self, url):
-        parsed_url = urlparse(url)
-        if parsed_url.netloc:
-            self.nodes.add(parsed_url.netloc)
-        elif parsed_url.path:
-            self.nodes.add(parsed_url.path)
-        else:
-            raise ValueError('Invalid URL')
+        self.nodes.add(url)
 
     def add_miners_block(self, new_block):
         if new_block["header"]["prev_hash"] == sha256(
@@ -179,4 +185,34 @@ class Blockchain:
         return True
 
     def replace_chain(self, new_chain):
-        pass
+        utxo = {}
+        txn_pool = copy.deepcopy(self.txn_pool)
+        txn_pool.update(copy.deepcopy(self.validated_txn_pool))
+        validated_txn_pool = {}
+        prestige_pool = {}
+        for new_block in new_chain:
+            for block_txn_id in new_block["txn"]:
+
+                block_txn = new_block["txn"][block_txn_id]
+                validated_txn_pool[block_txn_id] = block_txn
+                if block_txn_id in txn_pool:
+                    txn_pool.pop(block_txn_id)
+
+                if block_txn["type"] == -1:
+                    if block_txn["receiver"] not in prestige_pool:
+                        prestige_pool[block_txn["receiver"]] = 0
+                    prestige_pool[block_txn["receiver"]] += 1
+
+                if block_txn["type"] == 0 or block_txn["type"] == 1 or block_txn["type"] == 2:
+                    if block_txn["receiver"] not in utxo:
+                        utxo[block_txn["receiver"]] = 0
+                    utxo[block_txn["receiver"]] += block_txn["amount"]
+                if block_txn["type"] == 1 or block_txn["type"] == 2:
+                    if block_txn["sender"] not in utxo:
+                        utxo[block_txn["sender"]] = 0
+                    utxo[block_txn["sender"]] -= block_txn["amount"]
+        self.chain = new_chain
+        self.txn_pool = txn_pool
+        self.validated_txn_pool = validated_txn_pool
+        self.prestige_pool = prestige_pool
+        self.utxo = utxo

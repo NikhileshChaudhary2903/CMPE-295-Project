@@ -158,7 +158,8 @@ def gossip():
         blockchain.register_node(data["origin"])
 
     for txn in data["transactions"]:
-        blockchain.txn_pool[txn] = data["transactions"][txn]
+        if txn not in blockchain.validated_txn_pool:
+            blockchain.txn_pool[txn] = data["transactions"][txn]
 
     if blockchain.find_winning_chain(data["blockchain"]):
         blockchain.replace_chain(data["blockchain"])
