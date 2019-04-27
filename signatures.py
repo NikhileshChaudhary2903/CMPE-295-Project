@@ -25,11 +25,12 @@ def verify_signature(public_key, data):
     # Check if the given data is in dict form and "signature" key is present
     if not isinstance(data, dict) and "signature" not in data.keys():
         return False
-    
-    sig = data["signature"].encode('ISO-8859-1')
+    sig_str = data["signature"]
+    sig = sig_str.encode('ISO-8859-1')
     data["signature"] = ""
     key = RSA.importKey(public_key)
     data_hash = SHA256.new(json.dumps(data, sort_keys=True).encode('utf8'))
+    data["signature"] = sig_str
     verifier = PKCS1_v1_5.new(key)
     return verifier.verify(data_hash, sig)
 

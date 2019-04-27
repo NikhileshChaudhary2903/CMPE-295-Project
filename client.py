@@ -125,7 +125,7 @@ def download_file(file_name, pem_file=None):
             txn_details = requests.get(full_node_ip + '/transaction/details', json={'txn_id' : file_detail['txn_id']}).json()['transaction']
             # print(txn_details)
             # print(txn_details)
-            provider_ip = txn_details['receiver_address']
+            provider_ip = txn_details['receiver']
             signed_time = signatures.sign_data(private_key, {'time' : str(datetime.now().time())})
             provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel('localhost:5001'))
             try:
