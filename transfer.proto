@@ -19,6 +19,7 @@ message FileInfo
     string fileName = 1;
     string txnId = 2;
     map<string, string> signedTime = 3;
+    string errMess = 4;
 }
 
 message Empty 

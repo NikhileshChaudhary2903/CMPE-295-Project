@@ -63,13 +63,13 @@ def upload_file(file_name, pem_file=None):
         f.write(str(file_details))
     # Wait till the trasactions are mined into a block
     # print(rand_provider_list)
-    sleep(2)
+    sleep(30)
  
     for i in range(len(file_details)):
         call_upload(file_details[i], rand_provider_list[i])
     
     print('Done...')
-    # print(private_key)
+
  # Write gRPC calls here   
 def call_upload(file_details, provider):
     seq_list = []
@@ -79,7 +79,9 @@ def call_upload(file_details, provider):
 
         provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel('localhost:5001'))
         # print(provider_stub)
-        provider_stub.UploadFile(gen_stream(seq_list), timeout=2)
+        file_info = provider_stub.UploadFile(gen_stream(seq_list), timeout=2)
+    if file_info.errMess == "Transfer Failed":
+        print("Transfer failed")
     
 
 def gen_stream(list_of_chunks):
@@ -120,14 +122,15 @@ def download_file(file_name, pem_file=None):
     
     with open(file_name, 'wb') as f:
         for file_detail in file_details:
-            txn_details = requests.get(full_node_ip + '/transaction/details', json={'txn_id' : file_detail['txn_id']}).json()
+            txn_details = requests.get(full_node_ip + '/transaction/details', json={'txn_id' : file_detail['txn_id']}).json()['transaction']
+            # print(txn_details)
             # print(txn_details)
             provider_ip = txn_details['receiver_address']
             signed_time = signatures.sign_data(private_key, {'time' : str(datetime.now().time())})
-            provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel(provider_ip))
+            provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel('localhost:5001'))
             try:
-                file_data_iterator = provider_stub.DownloadFile(transfer_pb2.FileInfo(fileName=file_detail['name'], txnid=file_detail['txn_id'], signedTime=signed_time), timeout=1)
-            except TimeoutError:
+                file_data_iterator = provider_stub.DownloadFile(transfer_pb2.FileInfo(fileName=file_detail['name'], txnId=file_detail['txn_id'], signedTime=signed_time))
+            except:
                 print('File Transfer Failed')
                 sys.exit(1)
             for resp in file_data_iterator:

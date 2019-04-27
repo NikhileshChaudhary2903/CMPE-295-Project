@@ -123,7 +123,7 @@ def get_transaction_details():
         return 'Missing values', 400
     global blockchain
     if values['txn_id'] in blockchain.validated_txn_pool:
-        response = {'transaction': values['txn_id']}
+        response = {'transaction': blockchain.validated_txn_pool[values['txn_id']]}
         return jsonify(response), 201
     else:
         response = {'message': 'Transaction not found'}

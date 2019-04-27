@@ -25,7 +25,7 @@ def mine(stake, public_key):
         # stake_val = int(binascii.hexlify(sha256(str(public_key + header["nonce"] + str(sha256(json.dumps(header, sort_keys=True).encode('utf8')).hexdigest())).encode('utf8')).hexdigest().encode('utf8')), 16)/(stake*blockchain.get_prestige())
         rank = rank_calc(last_block_header, stake, header["prestige"], public_key)
         blockchain.add_miners_block({"header" : header, "rank" : rank, "txn" : txns})
-        sleep(20)
+        sleep(10)
 
 def get_header(txns, last_block_header, stake, public_key, prestige):
     return {

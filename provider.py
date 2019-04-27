@@ -19,9 +19,11 @@ class FileTransfer(transfer_pb2_grpc.fileTransferServicer):
         file_name = fd.fileName
         file_hash = fd.fileHash
         txn_id = fd.txnId
-        resp = requests.post(full_node_ip+'/trasaction/details', data={'txn_id' : txn_id}).json()
+        resp = requests.get(full_node_ip+'/transaction/details', json={'txn_id' : txn_id})
         # TODO verify whether the trasaction is valid
+        # print(resp.json())
         if resp.status_code == 201:
+            resp = resp.json()
             with open(file_hash + '_' + file_name, "wb") as f:
                 f.write(fd.data)
                 for seq in fileDataStream:
@@ -29,13 +31,14 @@ class FileTransfer(transfer_pb2_grpc.fileTransferServicer):
             file_read_details = {file_hash + '_' + file_name : {'reads_left' : [(500, (str(datetime.now().time()), 0))]}}
             with open(file_hash + '_' + file_name + '.txt', "w") as f:
                 f.write(str(file_read_details))
-            return transfer_pb2.FileInfo(fileName=file_name)
+            return transfer_pb2.FileInfo(fileName=file_name, errMess="")
+        return transfer_pb2.FileInfo(errMess="Transfer Failed")
     
     def DownloadFile(self, fileInfo, context):
         file_name = fileInfo.fileName
         txn_id = fileInfo.txnId
         signed_time = dict(fileInfo.signedTime)
-        txn_details = requests.post(full_node_ip + '/transaction/details', data={'txn_id' : txn_id})
+        txn_details = requests.get(full_node_ip + '/transaction/details', json={'txn_id' : txn_id}).json()['transaction']
         sender_public_key = txn_details['sender_address']
         if signatures.verify_signature(sender_public_key, signed_time):
             file_hash = txn_details['file']['hash']
