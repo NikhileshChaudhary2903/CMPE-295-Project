@@ -14,7 +14,7 @@ from ast import literal_eval
 from datetime import datetime
 from argparse import ArgumentParser
 
-full_node_ip = 'http://0.0.0.0:5000'
+full_node_ip = 'http://169.254.42.254:5000'
 
 chunk_to_amount = { 10 : 10.0, 32 : 15.0, 64 : 30.0, 128 : 50.0, 256 : 100.0, 512 : 150.0, 1024 : 200.0 }
 
@@ -79,7 +79,7 @@ def call_upload(file_details, provider):
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             seq_list.append(transfer_pb2.FileData(fileName=file_details['name'], fileHash=str(file_details['hash']), txnId=file_details['txn_id'], data=chunk))
 
-        provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel('localhost:5001'))
+        provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel(provider[0][7:]))
         # print(provider_stub)
         try:
             file_info = provider_stub.UploadFile(gen_stream(seq_list), timeout=2)
