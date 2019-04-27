@@ -15,12 +15,28 @@ from datetime import datetime
 
 full_node_ip = 'http://0.0.0.0:5000'
 
-def upload_file(file_name, public_key=None, private_key=None):
-    if public_key == "":
-        d = wallets.get_wallet()
+def upload_file(file_name, pem_file=None):
+    # if public_key == "":
+    #     d = wallets.get_wallet()
+        # public_key = d["public_key_string"]
+        # private_key = d["private_key_string"]
+    # file_size = os.path.getsize(str(Path(file_name).resolve()))
+    public_key = ""
+    private_key = ""
+    if pem_file is None or pem_file is "":
+        wallets.generate_pem()
+        d = {}
+        with open('private_key.pem', 'r') as f:
+            d = literal_eval(f.read())
         public_key = d["public_key_string"]
         private_key = d["private_key_string"]
-    # file_size = os.path.getsize(str(Path(file_name).resolve()))
+    else:
+        d = {}
+        with open(pem_file, 'r') as f:
+            d = literal_eval(f.read())
+        public_key = d["public_key_string"]
+        private_key = d["private_key_string"]
+
     file_chunk_size = 1024 * 1024 * 10
     file_details = []
     chunk_id = 0
@@ -40,7 +56,7 @@ def upload_file(file_name, public_key=None, private_key=None):
         rand_provider_list.append(provider)
         provider_public_key = provider[1]
         # file_txn_ids.append(file_txn_id)
-        file_txn_id = create_transaction(public_key, private_key, provider_public_key, 0, file_detail)
+        file_txn_id = create_transaction(public_key, private_key, provider_public_key, 10, file_detail)
         file_detail['txn_id'] = file_txn_id
     
     with open(file_name + '.txt', "w") as f:
@@ -53,7 +69,7 @@ def upload_file(file_name, public_key=None, private_key=None):
         call_upload(file_details[i], rand_provider_list[i])
     
     print('Done...')
-    print(private_key)
+    # print(private_key)
  # Write gRPC calls here   
 def call_upload(file_details, provider):
     seq_list = []
@@ -82,14 +98,30 @@ def create_transaction(sender_address, sender_private_key, receiver_address, amo
     print(signed_txn_id)
     return signed_txn_id['txn_id']
 
-def download_file(file_name, private_key):
+def download_file(file_name, pem_file=None):
+    # public_key = ""
+    private_key = ""
+    if pem_file is None or pem_file is "":
+        wallets.generate_pem()
+        d = {}
+        with open('private_key.pem', 'r') as f:
+            d = literal_eval(f.read())
+        # public_key = d["public_key_string"]
+        private_key = d["private_key_string"]
+    else:
+        d = {}
+        with open(pem_file, 'r') as f:
+            d = literal_eval(f.read())
+        # public_key = d["public_key_string"]
+        private_key = d["private_key_string"]
     file_details = []
     with open(file_name + '.txt', 'r') as f:
         file_details = literal_eval(f.read())
     
     with open(file_name, 'wb') as f:
         for file_detail in file_details:
-            txn_details = requests.post(full_node_ip + '/transaction/details', data={'txn_id' : file_detail['txn_id']})
+            txn_details = requests.get(full_node_ip + '/transaction/details', json={'txn_id' : file_detail['txn_id']}).json()
+            # print(txn_details)
             provider_ip = txn_details['receiver_address']
             signed_time = signatures.sign_data(private_key, {'time' : str(datetime.now().time())})
             provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel(provider_ip))
@@ -104,13 +136,21 @@ def download_file(file_name, private_key):
 
 if __name__ == "__main__":
     try:
-        cmd, file_name, public_key, private_key = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+        cmd, file_name = sys.argv[1], sys.argv[2]
     except IndexError:
         print("Need 4 command line arguments, please try again...")
         sys.exit(1)
     if cmd.lower() == 'download':
-        download_file(file_name, private_key)
+        try:
+            pem_file = sys.argv[3]
+            download_file(file_name, pem_file)
+        except IndexError:
+            download_file(file_name)
     elif cmd.lower() == 'upload':
-        upload_file(file_name, public_key, private_key)
+        try:
+            pem_file = sys.argv[3]
+            upload_file(file_name, pem_file)
+        except IndexError:
+            upload_file(file_name)
     else:
         print("Wrong command line argument, please try again...")
