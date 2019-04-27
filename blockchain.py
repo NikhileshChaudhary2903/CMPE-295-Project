@@ -7,6 +7,8 @@ import signatures
 from hashlib import sha256
 import json
 import rank_calc
+import pprint
+import copy
 
 
 class Blockchain:
@@ -97,7 +99,7 @@ class Blockchain:
         return self.chain[-1]
 
     def get_txns(self):
-        return self.txn_pool
+        return copy.deepcopy(self.txn_pool)
 
     def get_prestige(self, public_key):
         if public_key in self.prestige_pool:
@@ -127,10 +129,11 @@ class Blockchain:
     def add_miners_block(self, new_block):
         if new_block["header"]["prev_hash"] == sha256(
                 json.dumps(self.chain[-1]["header"], sort_keys=True).encode('utf8')).hexdigest():
-            for block_txn in new_block["txn"]:
-                self.validated_txn_pool[block_txn] = new_block["txn"][block_txn]
-                if block_txn in self.txn_pool:
-                    self.txn_pool.pop(block_txn)
+            for block_txn_id in new_block["txn"]:
+                block_txn = new_block["txn"][block_txn_id]
+                self.validated_txn_pool[block_txn_id] = block_txn
+                if block_txn_id in self.txn_pool:
+                    self.txn_pool.pop(block_txn_id)
                 if block_txn["type"] == -1:
                     if block_txn["receiver"] not in self.prestige_pool:
                         self.prestige_pool[block_txn["receiver"]] = 0
@@ -147,8 +150,8 @@ class Blockchain:
             if json.dumps(new_chain[-1], sort_keys=True).encode('utf8') == json.dumps(self.chain[-1],
                                                                                       sort_keys=True).encode('utf8'):
                 return rank_calc.rank_calc(new_chain[-2]["header"], new_chain[-1]["header"]["stake"],
-                                           new_chain[-1]["header"]["prestige"]) < rank_calc.rank_calc(
-                    self.chain[-2]["header"], self.chain[-1]["header"]["stake"], self.chain[-1]["header"]["prestige"])
+                                           new_chain[-1]["header"]["prestige"], new_chain[-1]["header"]["miner"]) < rank_calc.rank_calc(
+                    self.chain[-2]["header"], self.chain[-1]["header"]["stake"], self.chain[-1]["header"]["prestige"], self.chain[-1]["header"]["miner"])
         return True
 
     def replace_chain(self, new_chain):

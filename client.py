@@ -56,7 +56,7 @@ def upload_file(file_name, pem_file=None):
         rand_provider_list.append(provider)
         provider_public_key = provider[1]
         # file_txn_ids.append(file_txn_id)
-        file_txn_id = create_transaction(public_key, private_key, provider_public_key, 0, file_detail)
+        file_txn_id = create_transaction(public_key, private_key, provider_public_key, 10, file_detail)
         file_detail['txn_id'] = file_txn_id
     
     with open(file_name + '.txt', "w") as f:
