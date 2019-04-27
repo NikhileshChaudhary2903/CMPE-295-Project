@@ -46,6 +46,7 @@ class Blockchain:
         self.nodes = set()
         self.node_identifier = str(uuid4()).replace('-', '')
         self.providers = []
+        self.utxo = {}
 
         txns = [
             {
@@ -94,28 +95,36 @@ class Blockchain:
                 if txn["receiver"] not in self.prestige_pool:
                     self.prestige_pool[txn["receiver"]] = 0
                 self.prestige_pool[txn["receiver"]] += 1
+            elif txn["type"] == 0:
+                if txn["receiver"] not in self.utxo:
+                    self.utxo[txn["receiver"]] = 0
+                self.utxo += txn["amount"]
 
     def get_last_block(self):
-        return self.chain[-1]
+        return copy.deepcopy(self.chain[-1])
 
     def get_txns(self):
         return copy.deepcopy(self.txn_pool)
 
     def get_prestige(self, public_key):
         if public_key in self.prestige_pool:
-            return self.prestige_pool[public_key]
+            return copy.deepcopy(self.prestige_pool[public_key])
         return 0
 
     def get_providers(self):
-        return self.providers
+        return copy.deepcopy(self.providers)
 
     def add_transaction(self, transaction):
         if signatures.verify_signature(transaction['sender_address'], transaction):
-            txn_id = merkle.get_transaction_id(transaction)
-            self.txn_pool[txn_id] = transaction
-            return len(self.chain), txn_id
-        else:
-            return -1, 0
+            if transaction['sender_address'] not in self.utxo:
+                return -2, 0
+            if self.utxo[transaction['sender_address']] < transaction["amount"]:
+                txn_id = merkle.get_transaction_id(transaction)
+                self.txn_pool[txn_id] = transaction
+                return len(self.chain), txn_id
+            else:
+                return -2, 0
+        return -1, 0
 
     def register_node(self, url):
         parsed_url = urlparse(url)
@@ -138,6 +147,11 @@ class Blockchain:
                     if block_txn["receiver"] not in self.prestige_pool:
                         self.prestige_pool[block_txn["receiver"]] = 0
                     self.prestige_pool[block_txn["receiver"]] += 1
+                else:
+                    if block_txn["receiver"] not in self.utxo:
+                        self.utxo[block_txn["receiver"]] = 0
+                    self.utxo += block_txn["amount"]
+
             self.chain.append(new_block)
 
     # returns true if the new_chain is better
@@ -150,8 +164,10 @@ class Blockchain:
             if json.dumps(new_chain[-1], sort_keys=True).encode('utf8') == json.dumps(self.chain[-1],
                                                                                       sort_keys=True).encode('utf8'):
                 return rank_calc.rank_calc(new_chain[-2]["header"], new_chain[-1]["header"]["stake"],
-                                           new_chain[-1]["header"]["prestige"], new_chain[-1]["header"]["miner"]) < rank_calc.rank_calc(
-                    self.chain[-2]["header"], self.chain[-1]["header"]["stake"], self.chain[-1]["header"]["prestige"], self.chain[-1]["header"]["miner"])
+                                           new_chain[-1]["header"]["prestige"],
+                                           new_chain[-1]["header"]["miner"]) < rank_calc.rank_calc(
+                    self.chain[-2]["header"], self.chain[-1]["header"]["stake"], self.chain[-1]["header"]["prestige"],
+                    self.chain[-1]["header"]["miner"])
         return True
 
     def replace_chain(self, new_chain):

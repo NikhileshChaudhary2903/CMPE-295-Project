@@ -5,11 +5,14 @@ from threading import Thread
 import sys
 from ast import literal_eval
 from blockchain import Blockchain
+
 # Initialize the Flask app
 app = Flask(__name__)
 
 # Instantiate the Blockchain
 blockchain = Blockchain.get_instance()
+
+
 # registering and investigating Nodes
 
 @app.route('/nodes/all', methods=['GET'])
@@ -104,12 +107,15 @@ def add_new_transaction():
 
     global blockchain
     index, txn_id = blockchain.add_transaction(values['transaction'])
-    if index != -1:
+    if index >= 0:
         response = {'message': f'Transaction will be added to Block {index}',
                     'txn_id': txn_id}
         return jsonify(response), 201
-    else:
+    elif index == -1:
         response = {'message': 'Transaction signature not valid'}
+        return jsonify(response), 400
+    elif index == -2:
+        response = {'message': 'Cannot spend more than what you have'}
         return jsonify(response), 400
 
 
@@ -128,6 +134,15 @@ def get_transaction_details():
     else:
         response = {'message': 'Transaction not found'}
         return jsonify(response), 400
+
+
+@app.route('/utxo', methods=['GET'])
+def get_utxo():
+    global blockchain
+    utxo = {
+        "utxo": blockchain.utxo
+    }
+    return jsonify(utxo), 200
 
 
 @app.route('/gossip', methods=['POST'])
@@ -151,14 +166,17 @@ def gossip():
 
     return "Gossip Received", 200
 
+
 def blockchain_run():
     app.run(host='0.0.0.0', port=5000)
+
 
 def mine_run(stake, pem_file):
     d = {}
     with open(pem_file, 'r') as f:
         d = literal_eval(f.read())
     mine(stake, d["public_key_string"])
+
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -168,6 +186,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     Thread(target=blockchain_run).start()
     if args.mine == 1:
-        stake, pem_file = args.stake, args.pem  
-        Thread(target=mine_run, args=(stake, pem_file, )).start()
-    
+        stake, pem_file = args.stake, args.pem
+        Thread(target=mine_run, args=(stake, pem_file,)).start()
