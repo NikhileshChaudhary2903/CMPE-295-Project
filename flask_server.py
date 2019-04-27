@@ -9,9 +9,6 @@ from blockchain import Blockchain
 # Initialize the Flask app
 app = Flask(__name__)
 
-# Instantiate the Blockchain
-blockchain = Blockchain.get_instance()
-
 
 # registering and investigating Nodes
 
@@ -47,8 +44,7 @@ def register_nodes():
 def full_blockchain():
     resp = {
         'chain': blockchain.chain,
-        'host': '0.0.0.0',
-        'port': 4000
+        'node_id': blockchain.node_id
     }
 
     return jsonify(resp), 200
@@ -118,7 +114,7 @@ def add_new_transaction():
         return jsonify(response), 400
     elif index == -2:
         response = {'message': 'Cannot spend more than what you have',
-        'current_balance':txn_id}
+                    'current_balance': txn_id}
         return jsonify(response), 400
 
 
@@ -170,8 +166,8 @@ def gossip():
     return "Gossip Received", 200
 
 
-def blockchain_run():
-    app.run(host='0.0.0.0', port=5000)
+def blockchain_run(port):
+    app.run(host='0.0.0.0', port=port)
 
 
 def mine_run(stake, pem_file):
@@ -186,8 +182,13 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--mine', default=0, type=int, help='1 to mine, 0 to run just the blockchain')
     parser.add_argument('-s', '--stake', default=1, type=int)
     parser.add_argument('-p', '--pem', default=None)
+    parser.add_argument('-hst', '--hst', default='0.0.0.0', type=str)
+    parser.add_argument('-pt', '--port', default=5000, type=int)
     args = parser.parse_args()
-    Thread(target=blockchain_run).start()
+
+    # Instantiate the Blockchain
+    blockchain = Blockchain.get_instance(args.hst, args.port)
+    Thread(target=blockchain_run, args=(args.port,)).start()
     if args.mine == 1:
         stake, pem_file = args.stake, args.pem
         Thread(target=mine_run, args=(stake, pem_file,)).start()

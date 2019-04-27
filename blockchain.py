@@ -15,13 +15,13 @@ class Blockchain:
     __instance = None
 
     @staticmethod
-    def get_instance():
+    def get_instance(host="0.0.0.0", port=5000):
         """ Static access method. """
         if Blockchain.__instance is None:
-            Blockchain()
+            Blockchain(host, port)
         return Blockchain.__instance
 
-    def __init__(self):
+    def __init__(self, host, port):
         if Blockchain.__instance is not None:
             raise Exception("This class is a singleton!")
         else:
@@ -44,9 +44,9 @@ class Blockchain:
         self.validated_txn_pool = {}
         self.prestige_pool = {}
         self.nodes = set()
-        self.node_identifier = str(uuid4()).replace('-', '')
         self.providers = []
         self.utxo = {}
+        self.node_id = "http://" + host + ":" + str(port)
 
         txns = [
             {
@@ -147,7 +147,7 @@ class Blockchain:
                 self.validated_txn_pool[block_txn_id] = block_txn
                 if block_txn_id in self.txn_pool:
                     self.txn_pool.pop(block_txn_id)
-                if block_txn["type"] == -1 :
+                if block_txn["type"] == -1:
                     if block_txn["receiver"] not in self.prestige_pool:
                         self.prestige_pool[block_txn["receiver"]] = 0
                     self.prestige_pool[block_txn["receiver"]] += 1
@@ -155,7 +155,7 @@ class Blockchain:
                     if block_txn["receiver"] not in self.utxo:
                         self.utxo[block_txn["receiver"]] = 0
                     self.utxo[block_txn["receiver"]] += block_txn["amount"]
-                if block_txn["type"] == 1 or block_txn["type"] == 2 :
+                if block_txn["type"] == 1 or block_txn["type"] == 2:
                     if block_txn["sender"] not in self.utxo:
                         self.utxo[block_txn["sender"]] = 0
                     self.utxo[block_txn["sender"]] -= block_txn["amount"]
