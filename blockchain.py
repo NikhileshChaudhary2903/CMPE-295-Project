@@ -52,7 +52,8 @@ class Blockchain:
                 "stake": 0,
                 "prestige": 1,
                 "miner": "Nikhilesh Chaudhary, Phani Teja Kantamneni, Arpit Mathur, Arshiya Pathan, Simon Shim",
-                "merkle": ""
+                "merkle": "",
+                "hash": ""
             },
             "rank": 0,
             "txn": {}
@@ -122,7 +123,7 @@ class Blockchain:
                 self.utxo[txn["sender"]] -= txn["amount"]
 
         self.chain[0]["header"]["merkle"] = merkle.merkle_root(self.validated_txn_pool)
-
+        self.chain[0]["header"]["hash"] = sha256(json.dumps(self.chain[0]["header"], sort_keys=True).encode('utf8')).hexdigest()
         Thread(target=send_gossip, args=(Blockchain.__instance,)).start()
 
     def get_last_block(self):
@@ -206,6 +207,11 @@ class Blockchain:
             if i > 0 and block["header"]["prev_hash"] != sha256(
                     json.dumps(prev_block["header"], sort_keys=True).encode('utf8')).hexdigest():
                 return False, "Error in previous hash at block " + str(i)
+            header = copy.deepcopy(block["header"])
+            header["hash"] = ""
+            if block["header"]["hash"] != sha256(
+                    json.dumps(header, sort_keys=True).encode('utf8')).hexdigest():
+                return False, "Error in hash at block " + str(i)
             if i > 0 and block["header"]["nonce"] != str(int(binascii.hexlify(sha256((block["header"]["miner"] + sha256(
                     json.dumps(prev_block["header"], sort_keys=True).encode('utf8')).hexdigest()).encode(
                 'utf8')).hexdigest().encode('utf8')), 16))[:32]:
