@@ -59,6 +59,7 @@ def upload_file(file_name, chunk_size, pem_file=""):
         # file_txn_ids.append(file_txn_id)
         file_txn_id = create_transaction(2, public_key, private_key, provider_public_key, chunk_to_amount[chunk_size], file_detail)
         file_detail['txn_id'] = file_txn_id
+        file_detail['provider_ip'] = provider[0]
     
     with open(file_name + '.txt', "w") as f:
         f.write(str(file_details))
@@ -82,11 +83,12 @@ def call_upload(file_details, provider):
         # print(provider_stub)
         try:
             file_info = provider_stub.UploadFile(gen_stream(seq_list), timeout=2)
+            if file_info.errMess == "Transfer Failed":
+                print("Transfer failed")
+                sys.exit(1)
         except Exception as e:
             print("Error occurred while file transfer : ", e)
-    if file_info.errMess == "Transfer Failed":
-        print("Transfer failed")
-        sys.exit(1)
+    
     
 # generate a stream of chunks for a given file
 def gen_stream(list_of_chunks):
@@ -113,7 +115,7 @@ def create_transaction(type, sender_address, sender_private_key, receiver_addres
 
     signed_txn = signatures.sign_data(sender_private_key, txn)
     signed_txn_id = requests.post(full_node_ip+'/transaction/add', json={'transaction':signed_txn}).json()
-    # print(signed_txn_id)
+    print(signed_txn_id)
     return signed_txn_id['txn_id']
 
 def download_file(file_name, pem_file=None):
@@ -139,7 +141,8 @@ def download_file(file_name, pem_file=None):
     with open(file_name, 'wb') as f:
         for file_detail in file_details:
             txn_details = requests.get(full_node_ip + '/transaction/details', json={'txn_id' : file_detail['txn_id']}).json()['transaction']
-            provider_ip = txn_details['receiver']
+            provider_ip = file_detail['provider_ip']
+            print(provider_ip)
             signed_time = signatures.sign_data(private_key, {'time' : str(datetime.now().time())})
             provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel(provider_ip[7:]))
             try:
@@ -148,10 +151,11 @@ def download_file(file_name, pem_file=None):
                 print('File Transfer Failed')
                 sys.exit(1)
             for resp in file_data_iterator:
-                if resp.errMess == "Signature Verification Failed":
+                if resp.errMess == "ok":
+                    f.write(resp.data)
+                else:
                     print("Signature Verification Failed")
                     sys.exit(1)
-                f.write(resp.data)
     print('Done...')    
 
 def send_money(receiver_public_key, amount, pem_file):
@@ -172,6 +176,33 @@ def send_money(receiver_public_key, amount, pem_file):
         sender_private_key = d["private_key_string"]
 
     return create_transaction(1, sender_public_key, sender_private_key, receiver_public_key, amount, {})
+
+def secure_share(file_name, pem_file=""):
+    public_key = ""
+    private_key = ""
+    if pem_file is "":
+        wallets.generate_pem()
+        tmp = {}
+        with open('private_key.pem', 'r') as f:
+            tmp = literal_eval(f.read())
+        public_key = tmp["public_key_string"]
+        private_key = tmp["private_key_string"]
+    else:
+        tmp = {}
+        with open(pem_file, 'r') as f:
+            tmp = literal_eval(f.read())
+        public_key = tmp["public_key_string"]
+        private_key = tmp["private_key_string"]
+    
+    file_details = []
+    with open(file_name + '.txt', 'r') as f:
+        file_details = literal_eval(f.read())
+
+    for file_detail in file_details:
+        file_detail['signed_time'] = signatures.sign_data(private_key, {'time' : str(datetime.now().time())})
+
+    return file_details
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -197,5 +228,9 @@ if __name__ == "__main__":
         file_name = args.file
         chunk_size = args.chunksize
         upload_file(file_name, chunk_size, pem_file) # enter chunksize in MB based on the amount willing to spend
+    # elif args.cmd.lower() == "secure_share":
+    #     pem_file = args.pem
+    #     file_name = args.file
+    #     secure_share(file_name, pem_file)
     else:
         print("Please enter valid command...")

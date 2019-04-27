@@ -25,7 +25,7 @@ class FileTransfer(transfer_pb2_grpc.fileTransferServicer):
         # print(resp.json())
         if resp.status_code == 201:
             resp = resp.json()
-            amount = resp['amount']
+            amount = resp['transaction']['amount']
             with open(file_hash + '_' + file_name, "wb") as f:
                 f.write(fd.data)
                 for seq in fileDataStream:
@@ -59,9 +59,9 @@ class FileTransfer(transfer_pb2_grpc.fileTransferServicer):
             
             with open(file_hash + '_' + file_name, "rb") as f:
                 for chunk in iter(lambda: f.read(1024*1024 * 10), b""):
-                    yield transfer_pb2.FileData(fileName=file_name, fileHash=file_hash, txnId=txn_id, data=chunk, errMess="")  
-        
-        yield transfer_pb2.FileData(errMess="Signature Verification Failed")
+                    yield transfer_pb2.FileData(fileName=file_name, fileHash=file_hash, txnId=txn_id, data=chunk, errMess="ok")  
+        else:
+            yield transfer_pb2.FileData(errMess="Signature Verification Failed")
 
 def serve(pem_file=""):
     d = {}
@@ -94,12 +94,9 @@ def serve(pem_file=""):
     except KeyboardInterrupt:
         sys.exit(1)
 
-serve()
-
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=5000, type=int)
     parser.add_argument('-pe', '--pem', default="", type=str)
-    parser.add_argument('-p', '--port', default=5000, type=int)
     args = parser.parse_args()
     serve(args.pem)
