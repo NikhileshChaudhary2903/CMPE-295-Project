@@ -12,6 +12,7 @@ message FileData
     string fileHash = 2;
     string txnId = 3;
     bytes data = 4;
+    string errMess = 5;
 }
 
 message FileInfo

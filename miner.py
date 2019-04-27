@@ -15,9 +15,9 @@ def mine(stake, public_key):
         txns = blockchain.get_txns()
         # txns.append({"type" : 0, "amount" : 10, "receiver" : public_key})
         # txns.append({"type" : -1, "receiver" : public_key})
-        tmp_txn = {"type" : 0, "amount" : 10, "receiver" : public_key}
+        tmp_txn = {"type" : 0, "amount" : 10, "receiver" : public_key, "time":str(datetime.now().time())}
         tmp_txn_hash = sha256(json.dumps(tmp_txn, sort_keys=True).encode('utf8')).hexdigest()
-        tmp_prestige_txn = {"type" : -1, "receiver" : public_key}
+        tmp_prestige_txn = {"type" : -1, "receiver" : public_key, "time":str(datetime.now().time())}
         tmp_prestige_txn_hash = sha256(json.dumps(tmp_prestige_txn, sort_keys=True).encode('utf8')).hexdigest()
         txns[tmp_txn_hash] = tmp_txn
         txns[tmp_prestige_txn_hash] = tmp_prestige_txn

@@ -12,18 +12,16 @@ import transfer_pb2_grpc
 import grpc
 from ast import literal_eval
 from datetime import datetime
+from argparse import ArgumentParser
 
 full_node_ip = 'http://0.0.0.0:5000'
 
-def upload_file(file_name, pem_file=None):
-    # if public_key == "":
-    #     d = wallets.get_wallet()
-        # public_key = d["public_key_string"]
-        # private_key = d["private_key_string"]
-    # file_size = os.path.getsize(str(Path(file_name).resolve()))
+chunk_to_amount = { 10 : 10.0, 32 : 15.0, 64 : 30.0, 128 : 50.0, 256 : 100.0, 512 : 150.0, 1024 : 200.0 }
+
+def upload_file(file_name, chunk_size, pem_file=""):
     public_key = ""
     private_key = ""
-    if pem_file is None or pem_file is "":
+    if pem_file is "":
         wallets.generate_pem()
         d = {}
         with open('private_key.pem', 'r') as f:
@@ -37,7 +35,7 @@ def upload_file(file_name, pem_file=None):
         public_key = d["public_key_string"]
         private_key = d["private_key_string"]
 
-    file_chunk_size = 1024 * 1024 * 10
+    file_chunk_size = 1024 * 1024 * chunk_size
     file_details = []
     chunk_id = 0
     
@@ -50,19 +48,22 @@ def upload_file(file_name, pem_file=None):
 
     # file_txn_ids = []
     providers_list = requests.get(full_node_ip+'/providers').json()
+    if providers_list['providers'] == []:
+        print("No provider available, try again later...")
+        sys.exit(1)
     rand_provider_list = []
     for file_detail in file_details:
         provider = choice(providers_list['providers'])
         rand_provider_list.append(provider)
         provider_public_key = provider[1]
         # file_txn_ids.append(file_txn_id)
-        file_txn_id = create_transaction(public_key, private_key, provider_public_key, 10, file_detail)
+        file_txn_id = create_transaction(2, public_key, private_key, provider_public_key, chunk_to_amount[chunk_size], file_detail)
         file_detail['txn_id'] = file_txn_id
     
     with open(file_name + '.txt', "w") as f:
         f.write(str(file_details))
+
     # Wait till the trasactions are mined into a block
-    # print(rand_provider_list)
     sleep(30)
  
     for i in range(len(file_details)):
@@ -79,25 +80,40 @@ def call_upload(file_details, provider):
 
         provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel('localhost:5001'))
         # print(provider_stub)
-        file_info = provider_stub.UploadFile(gen_stream(seq_list), timeout=2)
+        try:
+            file_info = provider_stub.UploadFile(gen_stream(seq_list), timeout=2)
+        except Exception as e:
+            print("Error occurred while file transfer : ", e)
     if file_info.errMess == "Transfer Failed":
         print("Transfer failed")
+        sys.exit(1)
     
-
+# generate a stream of chunks for a given file
 def gen_stream(list_of_chunks):
     for chunk in list_of_chunks:
         yield chunk        
 
-def create_transaction(sender_address, sender_private_key, receiver_address, amount, file_details):
-    txn = {"type" : 2,
-            "sender" : sender_address,
-            "amount" : amount,
-            "receiver" : receiver_address, 
-            "file" : file_details }
+def create_transaction(type, sender_address, sender_private_key, receiver_address, amount, file_details):
+    if type == 2:
+        txn = {"type" : type,
+                "sender" : sender_address,
+                "amount" : amount,
+                "receiver" : receiver_address,
+                "time":str(datetime.now().time()), 
+                "file" : file_details }
+    elif type == 1:
+        txn = {"type" : type,
+                "sender" : sender_address,
+                "amount" : amount,
+                "receiver" : receiver_address,
+                "time" : str(datetime.now().time()) }
+    else:
+        print("Wrong transaction type specified, please try again...")
+        sys.exit(1)
 
     signed_txn = signatures.sign_data(sender_private_key, txn)
     signed_txn_id = requests.post(full_node_ip+'/transaction/add', json={'transaction':signed_txn}).json()
-    print(signed_txn_id)
+    # print(signed_txn_id)
     return signed_txn_id['txn_id']
 
 def download_file(file_name, pem_file=None):
@@ -123,37 +139,63 @@ def download_file(file_name, pem_file=None):
     with open(file_name, 'wb') as f:
         for file_detail in file_details:
             txn_details = requests.get(full_node_ip + '/transaction/details', json={'txn_id' : file_detail['txn_id']}).json()['transaction']
-            # print(txn_details)
-            # print(txn_details)
             provider_ip = txn_details['receiver']
             signed_time = signatures.sign_data(private_key, {'time' : str(datetime.now().time())})
-            provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel('localhost:5001'))
+            provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel(provider_ip[7:]))
             try:
                 file_data_iterator = provider_stub.DownloadFile(transfer_pb2.FileInfo(fileName=file_detail['name'], txnId=file_detail['txn_id'], signedTime=signed_time))
             except:
                 print('File Transfer Failed')
                 sys.exit(1)
             for resp in file_data_iterator:
+                if resp.errMess == "Signature Verification Failed":
+                    print("Signature Verification Failed")
+                    sys.exit(1)
                 f.write(resp.data)
     print('Done...')    
 
-if __name__ == "__main__":
-    try:
-        cmd, file_name = sys.argv[1], sys.argv[2]
-    except IndexError:
-        print("Need 4 command line arguments, please try again...")
-        sys.exit(1)
-    if cmd.lower() == 'download':
-        try:
-            pem_file = sys.argv[3]
-            download_file(file_name, pem_file)
-        except IndexError:
-            download_file(file_name)
-    elif cmd.lower() == 'upload':
-        try:
-            pem_file = sys.argv[3]
-            upload_file(file_name, pem_file)
-        except IndexError:
-            upload_file(file_name)
+def send_money(receiver_public_key, amount, pem_file):
+    sender_public_key = ""
+    sender_private_key = ""
+    if pem_file is "":
+        wallets.generate_pem()
+        d = {}
+        with open('private_key.pem', 'r') as f:
+            d = literal_eval(f.read())
+        sender_public_key = d["public_key_string"]
+        sender_private_key = d["private_key_string"]
     else:
-        print("Wrong command line argument, please try again...")
+        d = {}
+        with open(pem_file, 'r') as f:
+            d = literal_eval(f.read())
+        sender_public_key = d["public_key_string"]
+        sender_private_key = d["private_key_string"]
+
+    return create_transaction(1, sender_public_key, sender_private_key, receiver_public_key, amount, {})
+
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument('-c', '--cmd', default="", type=str)
+    parser.add_argument('-f', '--file', default="", type=str)
+    parser.add_argument('-p', '--pem', default="", type=str)
+    parser.add_argument('-pb', '--publickey', default="", type=str)
+    parser.add_argument('-a', '--amount', default=0.0, type=float)
+    parser.add_argument('-csz', '--chunksize', default=10, type=int)
+    args = parser.parse_args()
+
+    if args.cmd.lower() == "send":
+        receiver = args.publickey
+        pem_file = args.pem
+        amount = float(args.amount)
+        print("transaction_id : ", send_money(receiver, amount, pem_file))
+    elif args.cmd.lower() == "download":
+        pem_file = args.pem
+        file_name = args.file
+        download_file(file_name, pem_file)
+    elif args.cmd.lower() == "upload":
+        pem_file = args.pem
+        file_name = args.file
+        chunk_size = args.chunksize
+        upload_file(file_name, chunk_size, pem_file) # enter chunksize in MB based on the amount willing to spend
+    else:
+        print("Please enter valid command...")
