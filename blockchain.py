@@ -1,4 +1,3 @@
-from urllib.parse import urlparse
 from threading import Thread
 import merkle
 import signatures
@@ -8,17 +7,25 @@ import rank_calc
 import copy
 from time import sleep
 import requests
+import binascii
+
+
+def send_request(blockchain, node):
+    try:
+        requests.post(node + '/gossip', json={
+            'origin': blockchain.node_id,
+            'blockchain': blockchain.chain,
+            'transactions': blockchain.txn_pool
+        })
+    except:
+        pass
 
 
 def send_gossip(blockchain):
     while True:
         sleep(0.5)
         for node in blockchain.nodes:
-            requests.post(node + '/gossip', json={
-                'origin': blockchain.node_id,
-                'blockchain': blockchain.chain,
-                'transactions': blockchain.txn_pool
-            })
+            Thread(target=send_request, args=(blockchain, node)).start()
 
 
 class Blockchain:
@@ -45,7 +52,7 @@ class Blockchain:
                 "stake": 0,
                 "prestige": 1,
                 "miner": "Nikhilesh Chaudhary, Phani Teja Kantamneni, Arpit Mathur, Arshiya Pathan, Simon Shim",
-                "merkle": merkle.merkle_root({})
+                "merkle": ""
             },
             "rank": 0,
             "txn": {}
@@ -114,6 +121,8 @@ class Blockchain:
                     self.utxo[txn["sender"]] = 0
                 self.utxo[txn["sender"]] -= txn["amount"]
 
+        self.chain[0]["header"]["merkle"] = merkle.merkle_root(self.validated_txn_pool)
+
         Thread(target=send_gossip, args=(Blockchain.__instance,)).start()
 
     def get_last_block(self):
@@ -134,6 +143,8 @@ class Blockchain:
         if signatures.verify_signature(transaction['sender'], transaction):
             if transaction['sender'] not in self.utxo:
                 return -2, 0
+            if merkle.get_transaction_id(transaction) in self.validated_txn_pool:
+                return -3, 0
             if self.utxo[transaction['sender']] >= transaction["amount"]:
                 txn_id = merkle.get_transaction_id(transaction)
                 self.txn_pool[txn_id] = transaction
@@ -175,7 +186,7 @@ class Blockchain:
             # self.chain wins on length
             return False
         if len(new_chain) == len(self.chain) and len(self.chain) > 1:
-            if json.dumps(new_chain[-1], sort_keys=True).encode('utf8') == json.dumps(self.chain[-1],
+            if json.dumps(new_chain[-2], sort_keys=True).encode('utf8') == json.dumps(self.chain[-2],
                                                                                       sort_keys=True).encode('utf8'):
                 return rank_calc.rank_calc(new_chain[-2]["header"], new_chain[-1]["header"]["stake"],
                                            new_chain[-1]["header"]["prestige"],
@@ -183,6 +194,24 @@ class Blockchain:
                     self.chain[-2]["header"], self.chain[-1]["header"]["stake"], self.chain[-1]["header"]["prestige"],
                     self.chain[-1]["header"]["miner"])
         return True
+
+    @staticmethod
+    def validate_chain(chain):
+        prev_block = {
+            "header": "genesis"
+        }
+        for i, block in enumerate(chain):
+            if merkle.merkle_root(block["txn"]) != block["header"]["merkle"]:
+                return False, "Error in merkle root at block " + str(i)
+            if i > 0 and block["header"]["prev_hash"] != sha256(
+                    json.dumps(prev_block["header"], sort_keys=True).encode('utf8')).hexdigest():
+                return False, "Error in previous hash at block " + str(i)
+            if i > 0 and block["header"]["nonce"] != str(int(binascii.hexlify(sha256((block["header"]["miner"] + sha256(
+                    json.dumps(prev_block["header"], sort_keys=True).encode('utf8')).hexdigest()).encode(
+                'utf8')).hexdigest().encode('utf8')), 16))[:32]:
+                return False, "Error in nonce at block " + str(i)
+            prev_block = block
+        return True, "All good"
 
     def replace_chain(self, new_chain):
         utxo = {}

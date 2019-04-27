@@ -42,9 +42,11 @@ def register_nodes():
 
 @app.route('/chain', methods=['GET'])
 def full_blockchain():
+    global blockchain
     resp = {
-        'chain': blockchain.chain,
-        'node_id': blockchain.node_id
+        'origin': blockchain.node_id,
+        'blockchain': blockchain.chain,
+        'transactions': blockchain.txn_pool
     }
 
     return jsonify(resp), 200
@@ -116,6 +118,9 @@ def add_new_transaction():
         response = {'message': 'Cannot spend more than what you have',
                     'current_balance': txn_id}
         return jsonify(response), 400
+    elif index == -3:
+        response = {'message': 'Transaction already added'}
+        return jsonify(response), 400
 
 
 @app.route('/transaction/details', methods=['GET'])
@@ -161,10 +166,26 @@ def gossip():
         if txn not in blockchain.validated_txn_pool:
             blockchain.txn_pool[txn] = data["transactions"][txn]
 
+    validation_result, validation_message = blockchain.validate_chain(data["blockchain"])
+    if not validation_result:
+        return validation_message, 400
     if blockchain.find_winning_chain(data["blockchain"]):
         blockchain.replace_chain(data["blockchain"])
+        return "Gossip Received, Chain Won", 200
 
-    return "Gossip Received", 200
+    return "Gossip Received, Chain Lost", 200
+
+
+@app.route('/gossip/get_text', methods=['GET'])
+def get_gossip():
+    global blockchain
+    response = {
+        'origin': blockchain.node_id,
+        'blockchain': blockchain.chain,
+        'transactions': blockchain.txn_pool
+    }
+
+    return jsonify(response), 200
 
 
 def blockchain_run(port):
