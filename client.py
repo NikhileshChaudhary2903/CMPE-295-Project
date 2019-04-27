@@ -90,9 +90,9 @@ def gen_stream(list_of_chunks):
 
 def create_transaction(sender_address, sender_private_key, receiver_address, amount, file_details):
     txn = {"type" : 2,
-            "sender_address" : sender_address,
+            "sender" : sender_address,
             "amount" : amount,
-            "receiver_address" : receiver_address, 
+            "receiver" : receiver_address, 
             "file" : file_details }
 
     signed_txn = signatures.sign_data(sender_private_key, txn)

@@ -99,11 +99,13 @@ def add_new_transaction():
     # Check that the required fields are in the POST'ed data
     required = ['transaction']
     if not all(k in values for k in required):
-        return 'Missing values', 400
+        response = {'message': 'Missing Values "transaction"'}
+        return jsonify(response), 400
 
-    required = ['sender_address']
+    required = ['sender']
     if not all(k in values['transaction'] for k in required):
-        return 'Missing values', 400
+        response = {'message': 'Missing Values "sender"'}
+        return jsonify(response), 400
 
     global blockchain
     index, txn_id = blockchain.add_transaction(values['transaction'])
@@ -115,7 +117,8 @@ def add_new_transaction():
         response = {'message': 'Transaction signature not valid'}
         return jsonify(response), 400
     elif index == -2:
-        response = {'message': 'Cannot spend more than what you have'}
+        response = {'message': 'Cannot spend more than what you have',
+        'current_balance':txn_id}
         return jsonify(response), 400
 
 

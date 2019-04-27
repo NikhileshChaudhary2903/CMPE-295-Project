@@ -98,7 +98,11 @@ class Blockchain:
             elif txn["type"] == 0:
                 if txn["receiver"] not in self.utxo:
                     self.utxo[txn["receiver"]] = 0
-                self.utxo += txn["amount"]
+                self.utxo[txn["receiver"]] += txn["amount"]
+            if txn["type"] == 1 or txn["type"] == 2:
+                if txn["sender"] not in self.utxo:
+                    self.utxo[txn["sender"]] = 0
+                self.utxo[txn["sender"]] -= txn["amount"]
 
     def get_last_block(self):
         return copy.deepcopy(self.chain[-1])
@@ -115,15 +119,15 @@ class Blockchain:
         return copy.deepcopy(self.providers)
 
     def add_transaction(self, transaction):
-        if signatures.verify_signature(transaction['sender_address'], transaction):
-            if transaction['sender_address'] not in self.utxo:
+        if signatures.verify_signature(transaction['sender'], transaction):
+            if transaction['sender'] not in self.utxo:
                 return -2, 0
-            if self.utxo[transaction['sender_address']] < transaction["amount"]:
+            if self.utxo[transaction['sender']] >= transaction["amount"]:
                 txn_id = merkle.get_transaction_id(transaction)
                 self.txn_pool[txn_id] = transaction
                 return len(self.chain), txn_id
             else:
-                return -2, 0
+                return -2, self.utxo[transaction['sender']]
         return -1, 0
 
     def register_node(self, url):
@@ -143,14 +147,18 @@ class Blockchain:
                 self.validated_txn_pool[block_txn_id] = block_txn
                 if block_txn_id in self.txn_pool:
                     self.txn_pool.pop(block_txn_id)
-                if block_txn["type"] == -1:
+                if block_txn["type"] == -1 :
                     if block_txn["receiver"] not in self.prestige_pool:
                         self.prestige_pool[block_txn["receiver"]] = 0
                     self.prestige_pool[block_txn["receiver"]] += 1
-                else:
+                if block_txn["type"] == 0 or block_txn["type"] == 1 or block_txn["type"] == 2:
                     if block_txn["receiver"] not in self.utxo:
                         self.utxo[block_txn["receiver"]] = 0
-                    self.utxo += block_txn["amount"]
+                    self.utxo[block_txn["receiver"]] += block_txn["amount"]
+                if block_txn["type"] == 1 or block_txn["type"] == 2 :
+                    if block_txn["sender"] not in self.utxo:
+                        self.utxo[block_txn["sender"]] = 0
+                    self.utxo[block_txn["sender"]] -= block_txn["amount"]
 
             self.chain.append(new_block)
 
