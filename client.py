@@ -14,11 +14,12 @@ from ast import literal_eval
 from datetime import datetime
 from argparse import ArgumentParser
 
-full_node_ip = 'http://169.254.42.254:5000'
+# full_node_ip = 'http://169.254.42.254:5000'
+full_node_ip = 'http://0.0.0.0:5000'
 
 chunk_to_amount = { 10 : 10.0, 32 : 15.0, 64 : 30.0, 128 : 50.0, 256 : 100.0, 512 : 150.0, 1024 : 200.0 }
 
-def upload_file(file_name, chunk_size, pem_file=""):
+def upload_file(file_name, pem_file="", chunk_size=10):
     public_key = ""
     private_key = ""
     if pem_file is "":
@@ -66,11 +67,15 @@ def upload_file(file_name, chunk_size, pem_file=""):
 
     # Wait till the trasactions are mined into a block
     sleep(30)
- 
-    for i in range(len(file_details)):
-        call_upload(file_details[i], rand_provider_list[i])
     
-    print('Done...')
+    try:
+        for i in range(len(file_details)):
+            call_upload(file_details[i], rand_provider_list[i])
+    except Exception as e:
+        return "File Upload failed : " + str(e)
+        
+    
+    return "File Uploaded"
 
  # Write gRPC calls here   
 def call_upload(file_details, provider):
@@ -227,7 +232,7 @@ if __name__ == "__main__":
         pem_file = args.pem
         file_name = args.file
         chunk_size = args.chunksize
-        upload_file(file_name, chunk_size, pem_file) # enter chunksize in MB based on the amount willing to spend
+        upload_file(file_name, pem_file, chunk_size) # enter chunksize in MB based on the amount willing to spend
     # elif args.cmd.lower() == "secure_share":
     #     pem_file = args.pem
     #     file_name = args.file
