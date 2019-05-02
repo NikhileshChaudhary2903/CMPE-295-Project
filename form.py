@@ -6,6 +6,10 @@ UPLOAD_FOLDER = os.path.dirname(os.path.abspath(__file__)) + '/uploads/'
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+@app.route("/")
+def index():
+    return render_template('index.html')
+
 @app.route("/upload")
 def fileUpload():
     return render_template('upload.html')
@@ -19,12 +23,12 @@ def upload_file():
    if request.method == 'POST':
       if 'file' not in request.files:
             flash('No file attached in request')
-            return redirect("/upload")
+            return redirect(request.url)
       f = request.files['file']
       uploaded_pem = request.files.get('pem')
       if f.filename == '' or uploaded_pem is None:
             flash('One of files is missing')
-            return redirect("/upload")
+            return redirect(request.url)
       filename = secure_filename(f.filename)      
       f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
       return 'file uploaded successfully'
