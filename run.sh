@@ -1,3 +1,4 @@
 #!/bin/bash
 
-python -m grpc.tools.protoc -I. --python_out=. --grpc_python_out=. proto/transfer.proto
+cd proto
+python -m grpc.tools.protoc -I. --python_out=. --grpc_python_out=. transfer.proto

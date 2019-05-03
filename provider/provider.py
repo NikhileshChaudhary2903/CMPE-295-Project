@@ -4,8 +4,6 @@ from pathlib import Path
 sys.path.append(str(Path(os.path.dirname(os.path.abspath(__file__))).parent)+'/proto')
 sys.path.append(str(Path(os.path.dirname(os.path.abspath(__file__))).parent)+'/wallets')
 sys.path.append(str(Path(os.path.dirname(os.path.abspath(__file__))).parent)+'/signatures')
-import transfer_pb2
-import transfer_pb2_grpc
 import grpc
 from concurrent import futures
 from time import sleep
@@ -16,6 +14,8 @@ import signatures
 import wallets
 from flask import jsonify
 from argparse import ArgumentParser
+import transfer_pb2
+import transfer_pb2_grpc
 
 full_node_ip = 'http://0.0.0.0:5000'
 my_ip = 'http://localhost:5001'
