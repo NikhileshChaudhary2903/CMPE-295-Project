@@ -1,4 +1,4 @@
-from client import secure_share
+import client
 from argparse import ArgumentParser
 import grpc
 import transfer_pb2
@@ -11,7 +11,7 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--pem', default="", type=str)
 
     args = parser.parse_args()
-    file_details = secure_share(args.file, args.pem)
+    file_details = client.secure_share(args.file, args.pem)
     # with open(file_details[0]['name'].rsplit('_')[0], 'wb') as f:
     #     for file_detail in file_details:
     #         provider_stub = transfer_pb2_grpc.fileTransferStub(grpc.insecure_channel(file_detail['provider_ip'][7:]))
