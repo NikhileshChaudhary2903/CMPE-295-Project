@@ -20,6 +20,7 @@ from argparse import ArgumentParser
 # full_node_ip = 'http://169.254.42.254:5000'
 full_node_ip = 'http://0.0.0.0:5000'
 UPLOADS_DIR = str(os.path.dirname(os.path.abspath(__file__))) + '/uploads/'
+DOWNLOAD_DIR = str(os.path.dirname(os.path.abspath(__file__))) + '/downloads/'
 
 chunk_to_amount = { 10 : 10.0, 32 : 15.0, 64 : 30.0, 128 : 50.0, 256 : 100.0, 512 : 150.0, 1024 : 200.0 }
 
@@ -144,10 +145,10 @@ def download_file(file_name, pem_file=None):
         # public_key = d["public_key_string"]
         private_key = d["private_key_string"]
     file_details = []
-    with open(file_name + '.txt', 'r') as f:
+    with open(UPLOADS_DIR + file_name + '.txt', 'r') as f:
         file_details = literal_eval(f.read())
     
-    with open(file_name, 'wb') as f:
+    with open(DOWNLOAD_DIR + file_name, 'wb') as f:
         for file_detail in file_details:
             txn_details = requests.get(full_node_ip + '/transaction/details', json={'txn_id' : file_detail['txn_id']}).json()['transaction']
             provider_ip = file_detail['provider_ip']
