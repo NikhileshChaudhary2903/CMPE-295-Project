@@ -3,7 +3,7 @@ from flask import Flask, request, render_template, url_for, redirect,flash
 from werkzeug.utils import secure_filename
 from client import upload_file, download_file
 
-# UPLOAD_FOLDER = os.path.dirname(os.path.abspath(__file__)) + '/uploads/'
+UPLOAD_FOLDER = os.path.dirname(os.path.abspath(__file__)) + '/uploads/'
 app = Flask(__name__)
 
 @app.route("/")
@@ -21,33 +21,25 @@ def fileDownload():
 @app.route('/onUpload', methods = ['POST'])
 def uploader():
    if request.method == 'POST':
-<<<<<<< HEAD
-      if 'file' not in request.files or 'pem' not in request.files:
-            flash('Missing files in request')
+      if 'file' not in request.files:
+            flash('Specify file to be uploaded')
+            return redirect("/upload")
+      
+      if 'pem' not in request.files:
+            flash('Specify pem file')
             return redirect("/upload")
       f = request.files['file']
       pem = request.files['pem']
       # if f.filename == '' or pem.filename == '':
       #       flash('One of files is missing')
       #       return redirect("/upload")
-      # filename = secure_filename(f.filename)      
-      # f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+      filename = secure_filename(f.filename)      
+      f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+      pem_filename = secure_filename(pem_filename)
+      pem.save(os.path.join(app.config['UPLOAD_FOLDER'], pem_filename))
       # return 'file uploaded successfully'
       # f = request.files['file']
       return upload_file(str(f.filename), str(pem.filename))
-=======
-      if 'file' not in request.files:
-            flash('No file attached in request')
-            return redirect(request.url)
-      f = request.files['file']
-      uploaded_pem = request.files.get('pem')
-      if f.filename == '' or uploaded_pem is None:
-            flash('One of files is missing')
-            return redirect(request.url)
-      filename = secure_filename(f.filename)      
-      f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-      return 'file uploaded successfully'
->>>>>>> 733eabd8dec010e66b4731975e013e19c50a537f
 
 @app.route('/onDownload', methods = ['POST'])
 def downloader():

@@ -212,5 +212,5 @@ if __name__ == '__main__':
     blockchain = Blockchain.get_instance(args.hst, args.port)
     Thread(target=blockchain_run, args=(args.port,)).start()
     if args.mine == 1:
-        stake, pem_file = args.stake, args.pem
+        stake, pem_file = args.stake, '../pem/' + args.pem
         Thread(target=mine_run, args=(stake, pem_file,)).start()

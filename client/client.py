@@ -1,9 +1,12 @@
+import sys
+import os
+from pathlib import Path
+sys.path.append(str(Path(os.path.dirname(os.path.abspath(__file__))).parent)+'/proto')
+sys.path.append(str(Path(os.path.dirname(os.path.abspath(__file__))).parent)+'/wallets')
+sys.path.append(str(Path(os.path.dirname(os.path.abspath(__file__))).parent)+'/signatures')
 import signatures
 import requests
-import os
-import sys
 import wallets
-from pathlib import Path
 from hashlib import sha256
 from random import choice
 from time import sleep
@@ -16,6 +19,7 @@ from argparse import ArgumentParser
 
 # full_node_ip = 'http://169.254.42.254:5000'
 full_node_ip = 'http://0.0.0.0:5000'
+UPLOADS_DIR = str(os.path.dirname(os.path.abspath(__file__))) + '/uploads/'
 
 chunk_to_amount = { 10 : 10.0, 32 : 15.0, 64 : 30.0, 128 : 50.0, 256 : 100.0, 512 : 150.0, 1024 : 200.0 }
 
@@ -40,7 +44,7 @@ def upload_file(file_name, pem_file="", chunk_size=10):
     file_details = []
     chunk_id = 0
     
-    with open(file_name, "rb") as f:
+    with open(UPLOADS_DIR + file_name, "rb") as f:
         for seq in iter(lambda: f.read(file_chunk_size), b""):
             file_details.append({'name' : file_name + '_' + str(chunk_id), 'hash' : sha256(seq).hexdigest(), 'size' : file_chunk_size})
             with open('tmp_uploads/' + file_details[-1]['name'], 'wb') as part:
@@ -62,7 +66,7 @@ def upload_file(file_name, pem_file="", chunk_size=10):
         file_detail['txn_id'] = file_txn_id
         file_detail['provider_ip'] = provider[0]
     
-    with open(file_name + '.txt', "w") as f:
+    with open(UPLOADS_DIR + file_name + '.txt', "w") as f:
         f.write(str(file_details))
 
     # Wait till the trasactions are mined into a block
@@ -221,15 +225,15 @@ if __name__ == "__main__":
 
     if args.cmd.lower() == "send":
         receiver = args.publickey
-        pem_file = args.pem
+        pem_file = '../pem/' + args.pem
         amount = float(args.amount)
         print("transaction_id : ", send_money(receiver, amount, pem_file))
     elif args.cmd.lower() == "download":
-        pem_file = args.pem
+        pem_file = '../pem/' + args.pem
         file_name = args.file
         download_file(file_name, pem_file)
     elif args.cmd.lower() == "upload":
-        pem_file = args.pem
+        pem_file = '../pem/' + args.pem
         file_name = args.file
         chunk_size = args.chunksize
         upload_file(file_name, pem_file, chunk_size) # enter chunksize in MB based on the amount willing to spend

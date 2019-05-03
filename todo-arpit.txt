@@ -1,4 +1,0 @@
-providers -> return { "providers" : [(ip, public_key)]}
-provider/add -> send { "ip" : "0.0.0.0", "public_key" : "publickey" }
-transaction/add -> send "signed transaction" -> return txn_id
-transaction/details -> send txn_id -> return transaction as json

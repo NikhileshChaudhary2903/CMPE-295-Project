@@ -1,9 +1,14 @@
+import sys
+import os
+from pathlib import Path
+sys.path.append(str(Path(os.path.dirname(os.path.abspath(__file__))).parent)+'/proto')
+sys.path.append(str(Path(os.path.dirname(os.path.abspath(__file__))).parent)+'/wallets')
+sys.path.append(str(Path(os.path.dirname(os.path.abspath(__file__))).parent)+'/signatures')
 import transfer_pb2
 import transfer_pb2_grpc
 import grpc
 from concurrent import futures
 from time import sleep
-import sys
 import requests
 from datetime import datetime
 from ast import literal_eval
@@ -14,6 +19,10 @@ from argparse import ArgumentParser
 
 full_node_ip = 'http://0.0.0.0:5000'
 my_ip = 'http://localhost:5001'
+
+DOWNLOAD_DIR = str(os.path.dirname(os.path.abspath(__file__))) + '/files/'
+if not os.path.exists(DOWNLOAD_DIR):
+        os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 class FileTransfer(transfer_pb2_grpc.fileTransferServicer):
     def UploadFile(self, fileDataStream, context):
@@ -26,12 +35,12 @@ class FileTransfer(transfer_pb2_grpc.fileTransferServicer):
         if resp.status_code == 201:
             resp = resp.json()
             amount = resp['transaction']['amount']
-            with open(file_hash + '_' + file_name, "wb") as f:
+            with open(DOWNLOAD_DIR + file_hash + '_' + file_name, "wb") as f:
                 f.write(fd.data)
                 for seq in fileDataStream:
                     f.write(seq.data)
             file_read_details = {file_hash + '_' + file_name : {'reads_left' : [[int(amount * 1000), (str(datetime.now().time()), {"time" : str(datetime.now().time()), "signature" : ""})]]}}
-            with open(file_hash + '_' + file_name + '.txt', "w") as f:
+            with open(DOWNLOAD_DIR + file_hash + '_' + file_name + '.txt', "w") as f:
                 f.write(str(file_read_details))
             return transfer_pb2.FileInfo(fileName=file_name, errMess="")
         return transfer_pb2.FileInfo(errMess="Transfer Failed")
@@ -47,23 +56,23 @@ class FileTransfer(transfer_pb2_grpc.fileTransferServicer):
             file_hash = txn_details['file']['hash']
             file_read_details = {}
             
-            with open(file_hash + '_' + file_name + '.txt', 'r') as f:
+            with open(DOWNLOAD_DIR + file_hash + '_' + file_name + '.txt', 'r') as f:
                 file_read_details = literal_eval(f.read())
             tmp_tup = file_read_details[file_hash + '_' + file_name]['reads_left'][-1] 
             reads_left = tmp_tup[0] - 1
             time_read = (str(datetime.now().time()), signed_time)
             file_read_details[file_hash + '_' + file_name]['reads_left'].append([reads_left, time_read])
             
-            with open(file_hash + '_' + file_name + '.txt', 'w') as f:
+            with open(DOWNLOAD_DIR + file_hash + '_' + file_name + '.txt', 'w') as f:
                 f.write(str(file_read_details))
             
-            with open(file_hash + '_' + file_name, "rb") as f:
+            with open(DOWNLOAD_DIR + file_hash + '_' + file_name, "rb") as f:
                 for chunk in iter(lambda: f.read(1024*1024 * 10), b""):
                     yield transfer_pb2.FileData(fileName=file_name, fileHash=file_hash, txnId=txn_id, data=chunk, errMess="ok")  
         else:
             yield transfer_pb2.FileData(errMess="Signature Verification Failed")
 
-def serve(pem_file=""):
+def serve(pem_file="", port=5000):
     d = {}
     public_key = ""
     private_key = ""
@@ -99,4 +108,4 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--port', default=5000, type=int)
     parser.add_argument('-pe', '--pem', default="", type=str)
     args = parser.parse_args()
-    serve(args.pem)
+    serve('../pem/' + args.pem, args.port)

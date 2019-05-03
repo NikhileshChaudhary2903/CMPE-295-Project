@@ -1,3 +1,8 @@
+import sys
+import os
+from pathlib import Path
+sys.path.append(str(Path(os.path.dirname(os.path.abspath(__file__))).parent)+'/merkle')
+sys.path.append(str(Path(os.path.dirname(os.path.abspath(__file__))).parent)+'/signatures')
 from threading import Thread
 import merkle
 import signatures

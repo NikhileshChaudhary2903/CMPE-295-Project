@@ -1,3 +1,7 @@
+import sys
+import os
+from pathlib import Path
+sys.path.append(str(Path(os.path.dirname(os.path.abspath(__file__))).parent)+'/merkle')
 from time import sleep
 from datetime import datetime
 from hashlib import sha256
