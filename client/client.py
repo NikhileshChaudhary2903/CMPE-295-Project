@@ -20,7 +20,11 @@ from argparse import ArgumentParser
 # full_node_ip = 'http://169.254.42.254:5000'
 full_node_ip = 'http://0.0.0.0:5000'
 UPLOADS_DIR = str(os.path.dirname(os.path.abspath(__file__))) + '/uploads/'
+if not os.path.exists(UPLOADS_DIR):
+        os.makedirs(UPLOADS_DIR, exist_ok=True)
 DOWNLOAD_DIR = str(os.path.dirname(os.path.abspath(__file__))) + '/downloads/'
+if not os.path.exists(DOWNLOAD_DIR):
+        os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 chunk_to_amount = { 10 : 10.0, 32 : 15.0, 64 : 30.0, 128 : 50.0, 256 : 100.0, 512 : 150.0, 1024 : 200.0 }
 
