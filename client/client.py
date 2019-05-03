@@ -19,12 +19,18 @@ from argparse import ArgumentParser
 
 # full_node_ip = 'http://169.254.42.254:5000'
 full_node_ip = 'http://0.0.0.0:5000'
+
 UPLOADS_DIR = str(os.path.dirname(os.path.abspath(__file__))) + '/uploads/'
 if not os.path.exists(UPLOADS_DIR):
         os.makedirs(UPLOADS_DIR, exist_ok=True)
+    
 DOWNLOAD_DIR = str(os.path.dirname(os.path.abspath(__file__))) + '/downloads/'
 if not os.path.exists(DOWNLOAD_DIR):
         os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+TMP_UPLOADS_DIR = str(os.path.dirname(os.path.abspath(__file__))) + '/tmp_uploads/'
+if not os.path.exists(TMP_UPLOADS_DIR):
+        os.makedirs(TMP_UPLOADS_DIR, exist_ok=True)
 
 chunk_to_amount = { 10 : 10.0, 32 : 15.0, 64 : 30.0, 128 : 50.0, 256 : 100.0, 512 : 150.0, 1024 : 200.0 }
 
@@ -243,9 +249,5 @@ if __name__ == "__main__":
         file_name = args.file
         chunk_size = args.chunksize
         upload_file(file_name, pem_file, chunk_size) # enter chunksize in MB based on the amount willing to spend
-    # elif args.cmd.lower() == "secure_share":
-    #     pem_file = args.pem
-    #     file_name = args.file
-    #     secure_share(file_name, pem_file)
     else:
         print("Please enter valid command...")

@@ -72,7 +72,7 @@ class FileTransfer(transfer_pb2_grpc.fileTransferServicer):
         else:
             yield transfer_pb2.FileData(errMess="Signature Verification Failed")
 
-def serve(pem_file="", port=5000):
+def serve(pem_file="", port=6000):
     d = {}
     public_key = ""
     private_key = ""
@@ -105,7 +105,7 @@ def serve(pem_file="", port=5000):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('-p', '--port', default=5000, type=int)
+    parser.add_argument('-p', '--port', default=6000, type=int)
     parser.add_argument('-pe', '--pem', default="", type=str)
     args = parser.parse_args()
     serve('../pem/' + args.pem, args.port)
