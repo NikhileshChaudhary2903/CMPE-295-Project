@@ -16,9 +16,13 @@ from flask import jsonify
 from argparse import ArgumentParser
 import transfer_pb2
 import transfer_pb2_grpc
+import json
 
-full_node_ip = 'http://0.0.0.0:5000'
-my_ip = 'http://localhost:5001'
+with open('../conf/config.json', 'r') as conf:
+    config = json.load(conf)
+
+full_node_ip = config["full_node_ip"]
+my_ip = config["provider_ip"]
 
 DOWNLOAD_DIR = str(os.path.dirname(os.path.abspath(__file__))) + '/files/'
 if not os.path.exists(DOWNLOAD_DIR):

@@ -16,9 +16,12 @@ import grpc
 from ast import literal_eval
 from datetime import datetime
 from argparse import ArgumentParser
+import json
 
-# full_node_ip = 'http://169.254.42.254:5000'
-full_node_ip = 'http://0.0.0.0:5000'
+with open('../conf/config.json', 'r') as conf:
+    config = json.load(conf)
+
+full_node_ip = config["full_node_ip"]
 
 UPLOADS_DIR = str(os.path.dirname(os.path.abspath(__file__))) + '/uploads/'
 if not os.path.exists(UPLOADS_DIR):

@@ -1,0 +1,4 @@
+{
+    "full_node_ip" : "http://0.0.0.0:5000",
+    "provider_ip" : "http://localhost:5001"
+}

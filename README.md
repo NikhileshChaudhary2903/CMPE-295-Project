@@ -10,7 +10,7 @@ source env/bin/activate
 Install requirements
 
 ```sh
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ### Generate python files
@@ -20,6 +20,11 @@ Run the bash script to generate proto files
 ```sh
 bash run.sh
 ```
+
+### Configuration
+
+Edit the config.json file in conf folder to add the IP addresses of provider and full_node  
+
 
 ### Start Blockchain
 
