@@ -166,7 +166,8 @@ def download_file(file_name, pem_file=None):
                 else:
                     print("Signature Verification Failed")
                     sys.exit(1)
-    print('Done...')    
+    # print('Done...')
+    return 'Done... File saved to downloads folder'    
 
 def send_money(receiver_public_key, amount, pem_file):
     sender_public_key = ""

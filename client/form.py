@@ -1,10 +1,13 @@
 import os
+import sys
+from pathlib import Path
 from flask import Flask, request, render_template, url_for, redirect,flash
 from werkzeug.utils import secure_filename
-from client import upload_file, download_file
+import client
 
-UPLOAD_FOLDER = os.path.dirname(os.path.abspath(__file__)) + '/uploads/'
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = os.path.dirname(os.path.abspath(__file__)) + '/uploads/'
+app.config['PEM_UPLOAD_FOLDER'] = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)+ '/pem'
 
 @app.route("/")
 def index():
@@ -30,20 +33,20 @@ def uploader():
             return redirect("/upload")
       f = request.files['file']
       pem = request.files['pem']
-      # if f.filename == '' or pem.filename == '':
-      #       flash('One of files is missing')
-      #       return redirect("/upload")
       filename = secure_filename(f.filename)      
+      pem_filename = secure_filename(pem.filename)
       f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-      pem_filename = secure_filename(pem_filename)
-      pem.save(os.path.join(app.config['UPLOAD_FOLDER'], pem_filename))
-      # return 'file uploaded successfully'
-      # f = request.files['file']
-      return upload_file(str(f.filename), str(pem.filename))
+      pem.save(os.path.join(app.config['PEM_UPLOAD_FOLDER'], pem_filename))
+      return client.upload_file(str(f.filename), '../pem/' + str(pem.filename))
 
 @app.route('/onDownload', methods = ['POST'])
 def downloader():
-      pass
+      if request.method == 'POST':
+            file_name = str(request.form.get('filename'))
+            pem = request.files['pem']
+            pem_filename = secure_filename(pem.filename)
+            pem.save(os.path.join(app.config['PEM_UPLOAD_FOLDER'], pem_filename))
+            return client.download_file(file_name, '../pem/' + str(pem.filename))
       
 if __name__ == '__main__':
     app.run(host='localhost', port=4000, debug=True)
